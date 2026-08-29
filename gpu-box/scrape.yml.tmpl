@@ -1,0 +1,6 @@
+global: { scrape_interval: 15s }
+scrape_configs:
+  - job_name: gpu
+    static_configs: [{ targets: ["127.0.0.1:__GPU_PORT__"], labels: { host: "__HOST_LABEL__" } }]
+  - job_name: llm
+    static_configs: [{ targets: ["__LLM_TARGET__"], labels: { host: "__HOST_LABEL__" } }]

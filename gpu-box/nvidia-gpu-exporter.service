@@ -1,0 +1,9 @@
+[Unit]
+Description=nvidia_gpu_exporter (aiobs)
+After=network.target
+[Service]
+ExecStart=/opt/aiobs/nvidia_gpu_exporter --web.listen-address=127.0.0.1:__GPU_PORT__
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target

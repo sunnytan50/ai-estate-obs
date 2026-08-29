@@ -58,14 +58,50 @@ def render_exposition(samples: list[Sample]) -> str:
     return "\n".join(lines)
 
 
+def _strip_inline_comment(value: str) -> str:
+    """Strip a dotenv-style inline comment from a raw (unstripped) value.
+
+    Unquoted: a `#` preceded by at least one whitespace character starts a
+    comment -- everything from there (including that whitespace) is
+    dropped. A `#` with no preceding whitespace (e.g. `abc#def`) is part of
+    the value, not a comment.
+
+    Quoted (single or double): everything inside the quotes is kept
+    verbatim, `#` included; whatever follows the closing quote -- comment
+    or not -- is discarded. Leading whitespace before the opening quote is
+    preserved here and removed later by the caller's own `.strip()`.
+
+    This runs on the raw partition() value (before whitespace-stripping),
+    so a comment immediately after `=` (e.g. `KEY=   # note`) is still
+    recognized -- the space right after `=` counts as the "preceding
+    whitespace" the comment needs.
+    """
+    stripped_start = value.lstrip()
+    leading_ws_len = len(value) - len(stripped_start)
+    if stripped_start[:1] in ("'", '"'):
+        quote_char = stripped_start[0]
+        closing = stripped_start.find(quote_char, 1)
+        if closing != -1:
+            # Keep the leading whitespace + the quoted segment (with its
+            # quotes); drop everything after the closing quote outright.
+            return value[: leading_ws_len + closing + 1]
+        # No closing quote -- malformed; fall through and treat as unquoted.
+    for i in range(1, len(value)):
+        if value[i] == "#" and value[i - 1].isspace():
+            return value[:i].rstrip()
+    return value
+
+
 def load_config(path: str) -> dict[str, str]:
     """Parse a KEY=VALUE env file (estate.env).
 
-    Blank lines and lines starting with `#` are ignored. Leading/trailing
-    whitespace is stripped from both key and value. Surrounding quotes
-    (single or double) are stripped from the value. A value with a leading
-    `~` is expanded to the user's home directory. When a key appears more
-    than once, the later occurrence wins.
+    Blank lines and lines starting with `#` are ignored. A dotenv-style
+    inline comment is stripped next (see `_strip_inline_comment`), *before*
+    quote-stripping or `~`-expansion. Leading/trailing whitespace is
+    stripped from both key and value. Surrounding quotes (single or
+    double) are stripped from the value. A value with a leading `~` is
+    expanded to the user's home directory. When a key appears more than
+    once, the later occurrence wins.
     """
     result: dict[str, str] = {}
     with open(path, "r", encoding="utf-8") as handle:
@@ -75,6 +111,7 @@ def load_config(path: str) -> dict[str, str]:
                 continue
             key, _, value = line.partition("=")
             key = key.strip()
+            value = _strip_inline_comment(value)
             value = value.strip()
             if len(value) >= 2 and value[0] == value[-1] and value[0] in "'\"":
                 value = value[1:-1]

@@ -156,6 +156,40 @@ class LoadConfigTests(unittest.TestCase):
             self.assertIsInstance(key, str)
             self.assertIsInstance(value, str)
 
+    # --- fix round 1: dotenv-style inline-comment stripping ---
+
+    def test_inline_comment_stripped_from_unquoted_value(self):
+        path = self._write("KEY=a,b  # note\n")
+        cfg = load_config(path)
+        self.assertEqual(cfg["KEY"], "a,b")
+
+    def test_hash_inside_double_quotes_is_kept_trailing_comment_stripped(self):
+        path = self._write('KEY="a # b" # note\n')
+        cfg = load_config(path)
+        self.assertEqual(cfg["KEY"], "a # b")
+
+    def test_hash_with_no_preceding_whitespace_is_part_of_value(self):
+        path = self._write("KEY=abc#def\n")
+        cfg = load_config(path)
+        self.assertEqual(cfg["KEY"], "abc#def")
+
+    def test_hash_inside_single_quotes_is_kept_trailing_comment_stripped(self):
+        path = self._write("KEY='a # b' # note\n")
+        cfg = load_config(path)
+        self.assertEqual(cfg["KEY"], "a # b")
+
+    def test_value_that_is_entirely_a_comment_yields_empty_string(self):
+        # Mirrors the real estate.env pattern: AIOBS_TOKSCALE_VERSION=<spaces># pin: ...
+        path = self._write("KEY=                   # pin: filled in later\n")
+        cfg = load_config(path)
+        self.assertEqual(cfg["KEY"], "")
+
+    def test_inline_comment_stripped_before_tilde_expansion(self):
+        # Mirrors the real estate.env pattern: AIOBS_OPENROUTER_ENV_FILE=~/.hermes/.env  # ...
+        path = self._write("KEY=~/.hermes/.env  # file containing the key\n")
+        cfg = load_config(path)
+        self.assertEqual(cfg["KEY"], os.path.expanduser("~/.hermes/.env"))
+
 
 class StateTests(unittest.TestCase):
     def setUp(self):

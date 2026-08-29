@@ -39,7 +39,7 @@
       "id": 2,
       "type": "gauge",
       "title": "GPU Power Now",
-      "description": "Live nvidia-smi power draw, win5090.",
+      "description": "Live nvidia-smi power draw, the GPU box.",
       "gridPos": { "h": 8, "w": 6, "x": 0, "y": 1 },
       "datasource": { "type": "prometheus", "uid": "vm" },
       "fieldConfig": {
@@ -80,7 +80,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "Watts vs Tok/s (24h)",
-      "description": "Power draw (left axis) overlaid with local server generation throughput (right axis). llama.cpp arm activates once that lane goes resident.",
+      "description": "Power draw (left axis) overlaid with local server generation throughput (right axis). llama.cpp exposes colon-namespaced metric names (llamacpp:*, per llama-server's --metrics documentation) -- queried as primary, with the underscore spelling (llamacpp_*) kept as a fallback until independently confirmed live against this project's own llama.cpp lane (owner-gated; see README). Combined with sglang via a 3-way label-preserving zero-fallback union (not a bare 'or') so that if more than one of the three ever reports data in the same window, none is silently dropped. llama.cpp legs read empty today -- expected, this box currently runs sglang only.",
       "gridPos": { "h": 8, "w": 12, "x": 6, "y": 1 },
       "datasource": { "type": "prometheus", "uid": "vm" },
       "fieldConfig": {
@@ -127,7 +127,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "sum(rate(sglang:generation_tokens_total[1m])) or sum(rate(llamacpp_tokens_predicted_total[1m]))",
+          "expr": "(sum(rate(sglang:generation_tokens_total[1m])) or sum(rate(llamacpp:tokens_predicted_total[1m]))*0 or sum(rate(llamacpp_tokens_predicted_total[1m]))*0) + (sum(rate(llamacpp:tokens_predicted_total[1m])) or sum(rate(sglang:generation_tokens_total[1m]))*0 or sum(rate(llamacpp_tokens_predicted_total[1m]))*0) + (sum(rate(llamacpp_tokens_predicted_total[1m])) or sum(rate(sglang:generation_tokens_total[1m]))*0 or sum(rate(llamacpp:tokens_predicted_total[1m]))*0)",
           "legendFormat": "tok/s",
           "instant": false,
           "range": true,
@@ -240,7 +240,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "Prompt vs Generation (by model)",
-      "description": "Server-side sglang: token rates by model_name, stacked. llama.cpp arm activates once that lane goes resident.",
+      "description": "Server-side sglang: token rates by model_name, stacked. llama.cpp's colon-namespaced metric names (llamacpp:*, per llama-server's --metrics documentation) are queried as primary, with the underscore spelling (llamacpp_*) kept as a fallback until independently confirmed live against this project's own llama.cpp lane (owner-gated; see README). Combined with sglang via a 3-way label-preserving zero-fallback union (not a bare 'or') so that if more than one of the three ever reports data in the same window, none is silently dropped. llama.cpp legs read empty today -- expected, this box currently runs sglang only.",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
       "datasource": { "type": "prometheus", "uid": "vm" },
       "fieldConfig": {
@@ -269,7 +269,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "sum by (model_name)(rate(sglang:prompt_tokens_total[5m])) or sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m]))",
+          "expr": "(sum by (model_name)(rate(sglang:prompt_tokens_total[5m])) or sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m]))*0) + (sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m])) or sum by (model_name)(rate(sglang:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m]))*0) + (sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m])) or sum by (model_name)(rate(sglang:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m]))*0)",
           "legendFormat": "prompt {{model_name}}",
           "instant": false,
           "range": true,
@@ -277,7 +277,7 @@
         },
         {
           "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "sum by (model_name)(rate(sglang:generation_tokens_total[5m])) or sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m]))",
+          "expr": "(sum by (model_name)(rate(sglang:generation_tokens_total[5m])) or sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m]))*0 or sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m]))*0) + (sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m])) or sum by (model_name)(rate(sglang:generation_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m]))*0) + (sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m])) or sum by (model_name)(rate(sglang:generation_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m]))*0)",
           "legendFormat": "generation {{model_name}}",
           "instant": false,
           "range": true,
@@ -511,7 +511,7 @@
       "id": 15,
       "type": "piechart",
       "title": "Local vs Cloud Share",
-      "description": "Yesterday-to-now token share: local (server-side sglang/llama.cpp -- whichever lane is currently resident, unioned via 'or' since only one runs at a time on this box, verified live) vs cloud (all client-side providers except hermes -- the same total as Daily Tokens by Provider). hermes is excluded from the cloud side here too, per the anti-double-count rule. Both sides use the same robust max_over_time two-point subtraction as the rest of this row, not increase() -- verified live that increase() on the LOCAL side is ALSO unreliable across a lane-residency boundary (undercounted by ~27x when the resident lane started less than a day ago).",
+      "description": "Yesterday-to-now token share: local (server-side sglang/llama.cpp -- whichever lane is currently resident, combined via a 3-way label-preserving zero-fallback union so that if more than one ever reports data in the same window none is silently dropped, rather than a bare 'or') vs cloud (all client-side providers except hermes -- the same total as Daily Tokens by Provider). llama.cpp is queried under its colon-namespaced metric names (llamacpp:*, per llama-server's --metrics documentation) as primary, with the underscore spelling (llamacpp_*) kept as a fallback until independently confirmed live against this project's own llama.cpp lane (owner-gated; see README) -- both legs read empty today, expected, this box currently runs sglang only. hermes is excluded from the cloud side here too, per the anti-double-count rule. All sides use the same robust max_over_time two-point subtraction as the rest of this row, not increase() -- verified live that increase() on the LOCAL side is ALSO unreliable across a lane-residency boundary (undercounted by ~27x when the resident lane started less than a day ago).",
       "gridPos": { "h": 8, "w": 6, "x": 0, "y": 36 },
       "datasource": { "type": "prometheus", "uid": "vm" },
       "fieldConfig": {
@@ -527,7 +527,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "(sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))))",
+          "expr": "(sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0)",
           "legendFormat": "local",
           "instant": false,
           "range": true,

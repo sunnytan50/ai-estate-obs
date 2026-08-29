@@ -3,6 +3,7 @@ Description=vmagent (aiobs)
 After=network-online.target
 [Service]
 ExecStart=/opt/aiobs/vmagent -promscrape.config=/opt/aiobs/scrape.yml \
+  -httpListenAddr=127.0.0.1:8429 \
   -remoteWrite.url=http://__HUB_IP__:__VM_PORT__/api/v1/write \
   -remoteWrite.tmpDataPath=/opt/aiobs/buffer -remoteWrite.maxDiskUsagePerURL=1GB
 Restart=always

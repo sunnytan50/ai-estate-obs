@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."; source config/estate.env
 [ -n "${AIOBS_HUB_TAILNET_IP}" ] || { echo "AIOBS_HUB_TAILNET_IP unset (run Tailscale task first)"; exit 1; }
-ssh "$AIOBS_HUB_SSH_HOST" "sudo mkdir -p /opt/observability && sudo chown \$(whoami) /opt/observability"
+ssh "$AIOBS_HUB_SSH_HOST" "sudo mkdir -p /opt/observability && sudo chown -R \$(whoami) /opt/observability"
 rsync -az --delete hub/ "$AIOBS_HUB_SSH_HOST:/opt/observability/"
 scp config/estate.env "$AIOBS_HUB_SSH_HOST:/opt/observability/.env"
 ssh "$AIOBS_HUB_SSH_HOST" "sudo test -s ${AIOBS_GRAFANA_ADMIN_PASSWORD_FILE} || { echo 'missing admin password file'; exit 1; }"

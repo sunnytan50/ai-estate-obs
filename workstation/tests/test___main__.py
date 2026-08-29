@@ -78,6 +78,24 @@ def _fake_lane_class(name, samples):
     return _Fake
 
 
+def _failing_lane_class(name, error):
+    """A zero-arg-constructible Lane double whose collect() always raises
+    `error` -- for driving run_lanes' own isolation (Task 8) and the "lane
+    failure is DATA, not a push failure" exit-code contract end-to-end
+    through the real main(), not just through filter_for_push/compute_push_state
+    called directly on hand-built Samples.
+    """
+
+    class _Failing:
+        def __init__(self):
+            self.name = name
+
+        def collect(self, cfg, state):
+            raise error
+
+    return _Failing
+
+
 class BuildLanesTests(unittest.TestCase):
     def test_empty_lanes_string_returns_empty_list(self):
         self.assertEqual(main_mod._build_lanes({"AIOBS_LANES": ""}), [])
@@ -455,6 +473,38 @@ class MainEntrypointTests(unittest.TestCase):
 
         self.assertIn(old_sample, first_call_samples)
         self.assertNotIn(old_sample, second_call_samples)
+
+    def test_lane_failure_still_exits_0_and_pushes_lane_up_zero_for_it(self):
+        # Fix round 1 regression: a lane's collect() raising was already
+        # covered piecemeal (run_lanes' own isolation in test_core.py;
+        # filter_for_push/compute_push_state exercised directly on
+        # hand-built aiobs_lane_up samples), but no test previously drove a
+        # genuinely raising collect() through the real main() end-to-end.
+        # TDD-honestly: this passes immediately with no production-code
+        # change -- run_lanes already isolates the failure and always emits
+        # aiobs_lane_up{lane=}=0 for it (Task 8), filter_for_push already
+        # always includes aiobs_lane_up regardless of state (Task 11), and
+        # main()'s exit code already only depends on push_samples' own
+        # outcome, never on individual lane health. This test closes the
+        # coverage gap a code review caught, not a behavior gap.
+        state_dir = os.path.join(self.tmp, "state")
+        config = _write_config(os.path.join(self.tmp, "estate.env"), AIOBS_LANES="tokscale", AIOBS_STATE_DIR=state_dir)
+        failing_cls = _failing_lane_class("tokscale", RuntimeError("boom"))
+
+        with patch.dict("aiobs_collector.__main__._KNOWN_LANES", {"tokscale": failing_cls}, clear=True):
+            with patch("aiobs_collector.__main__.push_samples") as mock_push:
+                with contextlib.redirect_stdout(io.StringIO()):
+                    code = main_mod.main(["--config", config])
+
+        self.assertEqual(code, 0)
+        mock_push.assert_called_once()
+        pushed_samples = mock_push.call_args[0][1]
+        lane_up_zero = [
+            s
+            for s in pushed_samples
+            if s.metric == "aiobs_lane_up" and s.labels.get("lane") == "tokscale" and s.value == 0.0
+        ]
+        self.assertEqual(len(lane_up_zero), 1)
 
 
 if __name__ == "__main__":

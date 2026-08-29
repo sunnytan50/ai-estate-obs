@@ -1,0 +1,6 @@
+config/estate.env
+private/
+*.pyc
+__pycache__/
+.firecrawl/
+*.state.json

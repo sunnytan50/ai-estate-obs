@@ -77,6 +77,29 @@ class RenderExpositionTests(unittest.TestCase):
         sample = Sample(metric="m", labels={"k": "a\nb"}, value=1.0, ts_ms=1)
         self.assertEqual(render_exposition([sample]), 'm{k="a\\nb"} 1 1')
 
+    def test_escape_order_is_backslash_first_combined_regressions(self):
+        # These two values regress the ORDER of the .replace() chain in
+        # _escape_label_value, not just that each escape fires in
+        # isolation. Backslash-escaping must run before quote- and
+        # newline-escaping: if it didn't, the backslash those two
+        # introduce would itself get doubled by a later backslash pass,
+        # producing one extra backslash pair in the output. Built via
+        # concatenation (rather than one dense literal) so each piece is
+        # independently obvious -- less room for a hand-escaping mistake
+        # in the test itself.
+
+        # backslash immediately followed by a quote: a \ " b
+        backslash_then_quote = "a" + "\\" + '"' + "b"
+        sample_a = Sample(metric="m", labels={"k": backslash_then_quote}, value=1.0, ts_ms=1)
+        expected_a = 'm{k="a' + "\\" * 3 + '"b"} 1 1'
+        self.assertEqual(render_exposition([sample_a]), expected_a)
+
+        # backslash immediately followed by a newline: a \ <newline> b
+        backslash_then_newline = "a" + "\\" + "\n" + "b"
+        sample_b = Sample(metric="m", labels={"k": backslash_then_newline}, value=1.0, ts_ms=1)
+        expected_b = 'm{k="a' + "\\" * 3 + 'nb"} 1 1'
+        self.assertEqual(render_exposition([sample_b]), expected_b)
+
     def test_multiple_samples_join_with_newline_no_trailing_newline(self):
         samples = [
             Sample(metric="a", labels={}, value=1.0, ts_ms=1),
@@ -230,6 +253,25 @@ class StateTests(unittest.TestCase):
     def test_save_state_dir_mode_0700(self):
         target = os.path.join(self.tmp, "state-dir")
         save_state(target, {})
+        mode = stat.S_IMODE(os.stat(target).st_mode)
+        self.assertEqual(mode, 0o700)
+
+    def test_save_state_tightens_pre_existing_dir_to_0700(self):
+        # test_save_state_dir_mode_0700 only covers a *freshly created*
+        # dir, where os.makedirs' own mode= argument is what sets 0700 --
+        # the explicit os.chmod afterward is unobservable there since the
+        # dir is already correct. Here the dir pre-exists at a looser
+        # mode (0755, as a plain `mkdir` or an earlier run might leave
+        # it); os.makedirs(..., exist_ok=True) ignores mode= for a dir
+        # that already exists, so only the explicit os.chmod call in
+        # save_state can be what tightens this one to 0700.
+        target = os.path.join(self.tmp, "pre-existing-state-dir")
+        os.mkdir(target)
+        os.chmod(target, 0o755)
+        self.assertEqual(stat.S_IMODE(os.stat(target).st_mode), 0o755)
+
+        save_state(target, {})
+
         mode = stat.S_IMODE(os.stat(target).st_mode)
         self.assertEqual(mode, 0o700)
 

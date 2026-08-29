@@ -1,0 +1,44 @@
+{
+  "_provenance": "Constructed from OpenRouter's DOCUMENTED /api/v1/activity response shape (docs page: 'Get user activity grouped by endpoint', captured 2026-08-29 via Firecrawl) -- NOT a live API capture. Every completion key in ~/.hermes/.env was tried live and all returned 401/403 (\"Only management keys can fetch activity for an account\"); this endpoint requires an OpenRouter Management API Key, a credential that does not exist yet. Field names/nesting match the docs exactly; token/cost/model values below are illustrative and redacted, not real usage figures.",
+  "data": [
+    {
+      "date": "2026-08-27",
+      "model": "deepseek/deepseek-v4-flash",
+      "model_permaslug": "deepseek/deepseek-v4-flash-2026-07-01",
+      "provider_name": "DeepSeek",
+      "endpoint_id": "3f29a1b0-1e4c-4a7d-9b6e-2c8f5a1d9e30",
+      "prompt_tokens": 12000,
+      "completion_tokens": 3200,
+      "reasoning_tokens": 0,
+      "requests": 40,
+      "usage": 0.42,
+      "byok_usage_inference": 0
+    },
+    {
+      "date": "2026-08-27",
+      "model": "z-ai/glm-5.1",
+      "model_permaslug": "z-ai/glm-5.1-2026-06-15",
+      "provider_name": "Z.AI",
+      "endpoint_id": "7c4e8d21-9a3b-4f56-8e12-5d0a6b3c7f41",
+      "prompt_tokens": 5000,
+      "completion_tokens": 1800,
+      "reasoning_tokens": 900,
+      "requests": 15,
+      "usage": 0.18,
+      "byok_usage_inference": 0
+    },
+    {
+      "date": "2026-08-28",
+      "model": "deepseek/deepseek-v4-flash",
+      "model_permaslug": "deepseek/deepseek-v4-flash-2026-07-01",
+      "provider_name": "DeepSeek",
+      "endpoint_id": "3f29a1b0-1e4c-4a7d-9b6e-2c8f5a1d9e30",
+      "prompt_tokens": 9000,
+      "completion_tokens": 2600,
+      "reasoning_tokens": 0,
+      "requests": 28,
+      "usage": 0.31,
+      "byok_usage_inference": 0
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template rendered by workstation/install-collector.sh via sed: every
+  placeholder token below (double-underscore-wrapped) is substituted with a
+  concrete, install-time-resolved value before this file is ever handed to
+  launchd.
+    __PYTHON__   absolute path to python3 (resolved via `command -v python3`)
+    __REPO__     absolute path to this repo checkout
+    __CONFIG__   absolute path to config/estate.env
+    __NPX_DIR__  the directory containing npx (resolved via `command -v npx`
+                 at install time). launchd's own default PATH has no
+                 node/npx on it, so the tokscale lane's `npx -y tokscale@...`
+                 shell-out would otherwise fail to find npx at all.
+    __LOG_FILE__ absolute path to ~/Library/Logs/aiobs/collector.log.
+                 launchd plist string values are NOT shell-expanded, so a
+                 literal "~" here would be treated as a literal directory
+                 named "~", not $HOME; the installer resolves the real path.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.aiobs.collector</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>__PYTHON__</string>
+        <string>-m</string>
+        <string>aiobs_collector</string>
+        <string>--config</string>
+        <string>__CONFIG__</string>
+    </array>
+
+    <!-- workstation/ so `python3 -m aiobs_collector` (which adds the cwd to
+         sys.path[0], same as invoking a script) can import the package;
+         mirrors how workstation/tests/*.py locate it via sys.path insertion. -->
+    <key>WorkingDirectory</key>
+    <string>__REPO__/workstation</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/bin:/bin:/usr/sbin:/sbin:__NPX_DIR__</string>
+    </dict>
+
+    <!-- Run once immediately on bootstrap, then every 600s thereafter. -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <key>StandardOutPath</key>
+    <string>__LOG_FILE__</string>
+    <key>StandardErrorPath</key>
+    <string>__LOG_FILE__</string>
+</dict>
+</plist>

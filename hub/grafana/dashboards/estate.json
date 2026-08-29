@@ -2,14 +2,14 @@
   "id": null,
   "uid": "aiobs-estate",
   "title": "AI Estate",
-  "description": "Flagship estate overview: GPU power/thermal and local inference throughput. Cloud-token rows land in a later revision of this file.",
+  "description": "Flagship estate overview: GPU power/thermal, local inference throughput, cloud token/cost flow by provider, and collector lane health.",
   "tags": ["aiobs"],
   "style": "dark",
   "timezone": "browser",
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 1,
+  "version": 3,
   "refresh": "30s",
   "time": { "from": "now-24h", "to": "now" },
   "templating": { "list": [] },
@@ -331,6 +331,338 @@
           "instant": false,
           "range": true,
           "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Cloud Tokens",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Daily Tokens by Provider",
+      "description": "Stacked daily token deltas per cloud-side provider (hermes excluded -- its client-side view mixes local + cloud-routed traffic and lives in its own attribution panel below, per the spec's anti-double-count rule). Query is a direct two-point counter subtraction -- max_over_time(...) minus its 1d-offset twin, each falling back to a zero-valued series that carries the SAME labels (X or (X*0), not X or vector(0), which has no labels and silently drops any series with no exact match) -- NOT increase(). increase() was verified live against this day-granular pushed data to be unreliable (window-size-dependent, off by up to ~27x); see README troubleshooting.",
+      "timeFrom": "30d",
+      "interval": "1d",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
+      "datasource": { "type": "prometheus", "uid": "vm" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "mappings": [],
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 100,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "mode": "normal", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
+          "legendFormat": "{{provider}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Cost per Day",
+      "description": "Daily cost delta per cloud-side provider (hermes excluded -- same anti-double-count rationale as Daily Tokens; hermes does carry real nonzero cost samples for its cloud-routed models, confirmed live, so this exclusion is load-bearing, not cosmetic). Same robust two-point subtraction as Daily Tokens by Provider, not increase(). Unstacked (grouped) -- the brief's table distinguishes this from the tokens panel, which is stacked.",
+      "timeFrom": "30d",
+      "interval": "1d",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
+      "datasource": { "type": "prometheus", "uid": "vm" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "currencyUSD",
+          "mappings": [],
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 100,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_cost_usd_total{provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_cost_usd_total{provider!=\"hermes\"}[400d])*0)))",
+          "legendFormat": "{{provider}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Month-to-Date",
+      "description": "Cumulative tokens since the start of the current calendar month, per cloud-side provider (hermes excluded). Panel time range is pinned to now/M via timeFrom, independent of the dashboard's own 24h default. Deliberately issued as a range query reduced to its last point, not an instant query: verified live that VictoriaMetrics' instant-query path (/api/v1/query) can return a materially wrong result for this same max_over_time+large-offset expression at the exact same evaluation instant an identical range query (/api/v1/query_range) gets exactly right against a raw-export ground truth -- a second, separate reliability finding beyond increase(); see README troubleshooting.",
+      "timeFrom": "now/M",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "vm" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset $__range) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
+          "legendFormat": "{{provider}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Model Breakdown (Top 12, 30d)",
+      "description": "Top 12 (provider, model) pairs by 30-day token delta across the whole estate. hermes IS included here (each row labeled provider=hermes distinctly) -- this is a ranked per-row breakdown, not a summed cross-provider total, so it doesn't re-trigger the anti-double-count rule the way a combined figure would. Same robust subtraction pattern as the other row-3 panels, issued as a range query reduced to its last value per series (see Month-to-Date's description for why instant mode is avoided).",
+      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 27 },
+      "datasource": { "type": "prometheus", "uid": "vm" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "short",
+          "custom": { "align": "auto", "cellOptions": { "type": "auto" } },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "transformations": [
+        { "id": "reduce", "options": { "reducers": ["lastNotNull"], "includeTimeField": false } }
+      ],
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "topk(12, sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\"}[400d])*0))))",
+          "legendFormat": "{{provider}} / {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Totals & Health",
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "type": "piechart",
+      "title": "Local vs Cloud Share",
+      "description": "Yesterday-to-now token share: local (server-side sglang/llama.cpp -- whichever lane is currently resident, unioned via 'or' since only one runs at a time on this box, verified live) vs cloud (all client-side providers except hermes -- the same total as Daily Tokens by Provider). hermes is excluded from the cloud side here too, per the anti-double-count rule. Both sides use the same robust max_over_time two-point subtraction as the rest of this row, not increase() -- verified live that increase() on the LOCAL side is ALSO unreliable across a lane-residency boundary (undercounted by ~27x when the resident lane started less than a day ago).",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "vm" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "mappings": [] },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "pieType": "pie",
+        "displayLabels": ["percent"],
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "(sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))))",
+          "legendFormat": "local",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
+          "legendFormat": "cloud",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "Hermes Per-Profile Attribution (client-side view)",
+      "description": "Daily token deltas by Hermes model/profile, as reported by tokscale's client-side view of Hermes activity (mixes local-served and cloud-routed-through-Hermes traffic). Deliberately never summed into any cross-provider total on this dashboard -- see the anti-double-count rule. Same robust subtraction pattern as the other day-granular panels, not increase().",
+      "timeFrom": "30d",
+      "interval": "1d",
+      "gridPos": { "h": 8, "w": 10, "x": 6, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "vm" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "short",
+          "mappings": [],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": { "type": "linear" },
+            "stacking": { "mode": "none", "group": "A" }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "sum by (model)(max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d]) - (max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d])*0)))",
+          "legendFormat": "{{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Collector Lane Up",
+      "description": "aiobs_lane_up per collector lane -- 1=succeeded this cycle, 0=failed or never run. Wrapped in last_over_time(...[20m]), not the bare metric name: a bare instant selector uses Prometheus/VM's default ~5-minute staleness lookback, which is shorter than this collector's 600s launchd cadence and was verified live to occasionally go blank (both a genuine risk on any real gap, and reproduced once during dashboard verification, apparently as a query-cache artifact) -- 20m is a comfortable multiple of the cadence. openrouter is EXPECTED to show 0 / DOWN until the owner provisions an OpenRouter Management API Key (see AIOBS_OPENROUTER_ENV_FILE / AIOBS_OPENROUTER_KEY_NAME in the README config table) -- the lane is deliberately fail-closed, not broken. A red openrouter tile here is normal, not an incident.",
+      "gridPos": { "h": 8, "w": 4, "x": 16, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "vm" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "none",
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN / not configured" }, "1": { "text": "UP" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "horizontal",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "last_over_time(aiobs_lane_up[20m])",
+          "legendFormat": "{{lane}}",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "stat",
+      "title": "Collector Lane Freshness",
+      "description": "Seconds since each lane's last successful run (time() minus last_over_time(aiobs_lane_last_success_timestamp[20m]) -- the last_over_time wrapper avoids the same default-staleness-lookback gap as the Lane Up panel, see its description). openrouter shows 'never (unkeyed)' -- it has no last_success sample at all until it first succeeds (fail-closed design, not a bug; confirmed live -- the series is genuinely absent, not zero). tokscale should stay well under the 600s launchd cadence plus a small margin.",
+      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 36 },
+      "datasource": { "type": "prometheus", "uid": "vm" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "unit": "dtdurations",
+          "noValue": "never (unkeyed)",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 900 },
+              { "color": "red", "value": 3600 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "orientation": "horizontal",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "vm" },
+          "expr": "time() - last_over_time(aiobs_lane_last_success_timestamp[20m])",
+          "legendFormat": "{{lane}}",
+          "instant": true,
+          "range": false,
+          "refId": "A"
         }
       ]
     }

@@ -9,7 +9,7 @@
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 3,
+  "version": 4,
   "refresh": "30s",
   "time": { "from": "now-24h", "to": "now" },
   "templating": { "list": [] },
@@ -434,6 +434,7 @@
       "title": "Month-to-Date",
       "description": "Cumulative tokens since the start of the current calendar month, per cloud-side provider (hermes excluded). Panel time range is pinned to now/M via timeFrom, independent of the dashboard's own 24h default. Deliberately issued as a range query reduced to its last point, not an instant query: verified live that VictoriaMetrics' instant-query path (/api/v1/query) can return a materially wrong result for this same max_over_time+large-offset expression at the exact same evaluation instant an identical range query (/api/v1/query_range) gets exactly right against a raw-export ground truth -- a second, separate reliability finding beyond increase(); see README troubleshooting.",
       "timeFrom": "now/M",
+      "interval": "1d",
       "gridPos": { "h": 8, "w": 6, "x": 0, "y": 27 },
       "datasource": { "type": "prometheus", "uid": "vm" },
       "fieldConfig": {
@@ -467,7 +468,8 @@
       "id": 13,
       "type": "table",
       "title": "Model Breakdown (Top 12, 30d)",
-      "description": "Top 12 (provider, model) pairs by 30-day token delta across the whole estate. hermes IS included here (each row labeled provider=hermes distinctly) -- this is a ranked per-row breakdown, not a summed cross-provider total, so it doesn't re-trigger the anti-double-count rule the way a combined figure would. Same robust subtraction pattern as the other row-3 panels, issued as a range query reduced to its last value per series (see Month-to-Date's description for why instant mode is avoided).",
+      "description": "Top 12 (provider, model) pairs by 30-day token delta across cloud-side providers (hermes excluded -- controller ruling: a ranked table still invites cross-provider comparison/summing by eye, which recreates the double-count the anti-double-count rule prevents, even with each row individually labeled. hermes's per-model breakdown lives exclusively in the Hermes Per-Profile Attribution panel below). Same robust subtraction pattern as the other row-3 panels, issued as a range query reduced to its last value per series (see Month-to-Date's description for why instant mode is avoided).",
+      "interval": "1d",
       "gridPos": { "h": 8, "w": 18, "x": 6, "y": 27 },
       "datasource": { "type": "prometheus", "uid": "vm" },
       "fieldConfig": {
@@ -489,7 +491,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "topk(12, sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\"}[400d])*0))))",
+          "expr": "topk(12, sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0))))",
           "legendFormat": "{{provider}} / {{model}}",
           "instant": false,
           "range": true,

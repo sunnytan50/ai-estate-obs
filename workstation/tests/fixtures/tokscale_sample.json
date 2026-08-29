@@ -1,0 +1,95 @@
+{
+  "meta": {
+    "generatedAt": "2026-08-21T09:00:00.000000+00:00",
+    "version": "4.14.0",
+    "dateRange": { "start": "2026-08-20", "end": "2026-08-21" }
+  },
+  "contributions": [
+    {
+      "date": "2026-08-20",
+      "totals": { "tokens": 1216000, "cost": 4.35, "messages": 42 },
+      "intensity": 2,
+      "tokenBreakdown": {
+        "input": 12000,
+        "output": 4000,
+        "cacheRead": 1180000,
+        "cacheWrite": 20000,
+        "reasoning": 3000
+      },
+      "clients": [
+        {
+          "client": "claude",
+          "modelId": "claude-sonnet-5",
+          "providerId": "anthropic",
+          "tokens": {
+            "input": 8000,
+            "output": 2500,
+            "cacheRead": 780000,
+            "cacheWrite": 20000,
+            "reasoning": 0
+          },
+          "cost": 2.75,
+          "messages": 25
+        },
+        {
+          "client": "codex",
+          "modelId": "gpt-5.6-sol",
+          "providerId": "openai",
+          "tokens": {
+            "input": 4000,
+            "output": 1500,
+            "cacheRead": 400000,
+            "cacheWrite": 0,
+            "reasoning": 3000
+          },
+          "cost": 1.60,
+          "messages": 17
+        }
+      ],
+      "activeTimeMs": 1800000
+    },
+    {
+      "date": "2026-08-21",
+      "totals": { "tokens": 905000, "cost": 3.10, "messages": 30 },
+      "intensity": 1,
+      "tokenBreakdown": {
+        "input": 9000,
+        "output": 3200,
+        "cacheRead": 880000,
+        "cacheWrite": 0,
+        "reasoning": 1800
+      },
+      "clients": [
+        {
+          "client": "claude",
+          "modelId": "claude-sonnet-5",
+          "providerId": "anthropic",
+          "tokens": {
+            "input": 5000,
+            "output": 1800,
+            "cacheRead": 520000,
+            "cacheWrite": 0,
+            "reasoning": 0
+          },
+          "cost": 1.90,
+          "messages": 18
+        },
+        {
+          "client": "codex",
+          "modelId": "gpt-5.6-sol",
+          "providerId": "openai",
+          "tokens": {
+            "input": 4000,
+            "output": 1400,
+            "cacheRead": 360000,
+            "cacheWrite": 0,
+            "reasoning": 1800
+          },
+          "cost": 1.20,
+          "messages": 12
+        }
+      ],
+      "activeTimeMs": 1500000
+    }
+  ]
+}

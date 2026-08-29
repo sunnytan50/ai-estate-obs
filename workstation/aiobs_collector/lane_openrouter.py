@@ -188,6 +188,10 @@ def normalize_openrouter(doc: dict, now_ms: int, state: Optional[dict] = None) -
         model = row.get("model")
         if not date_str or not model:
             continue
+        # The live API dates rows as "YYYY-MM-DD HH:MM:SS" (the docs showed
+        # bare dates); canonicalize here so grouping keys, the persisted
+        # last_date, and end-of-day timestamps all agree on one format.
+        date_str = str(date_str).split(" ")[0].split("T")[0]
         bucket = daily.setdefault((date_str, model), {"input": 0.0, "output": 0.0, "cost": 0.0})
         bucket["input"] += float(row.get("prompt_tokens") or 0)
         bucket["output"] += float(row.get("completion_tokens") or 0)

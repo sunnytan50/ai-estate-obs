@@ -608,3 +608,23 @@ class OpenRouterLaneTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NormalizeOpenRouterLiveDateFormatTests(unittest.TestCase):
+    """The live /api/v1/activity dates rows as 'YYYY-MM-DD HH:MM:SS';
+    the docs (and fixture) show bare dates. Both must normalize identically
+    (first live run 2026-08-29 crashed on int('29 00:00:00'))."""
+
+    def test_datetime_suffixed_dates_normalize_like_bare_dates(self):
+        now_ms = _local_ms(2026, 8, 29, 12, 0, 0)
+        bare = {"data": [_row("2026-08-27", "m/x", prompt=100, completion=50, usage=1.5),
+                         _row("2026-08-28", "m/x", prompt=10, completion=5, usage=0.5)]}
+        suffixed = {"data": [_row("2026-08-27 00:00:00", "m/x", prompt=100, completion=50, usage=1.5),
+                             _row("2026-08-28 00:00:00", "m/x", prompt=10, completion=5, usage=0.5)]}
+        self.assertEqual(normalize_openrouter(bare, now_ms), normalize_openrouter(suffixed, now_ms))
+
+    def test_iso_t_separator_also_normalizes(self):
+        now_ms = _local_ms(2026, 8, 29, 12, 0, 0)
+        bare = {"data": [_row("2026-08-27", "m/x", prompt=7, completion=3, usage=0.1)]}
+        iso = {"data": [_row("2026-08-27T00:00:00", "m/x", prompt=7, completion=3, usage=0.1)]}
+        self.assertEqual(normalize_openrouter(bare, now_ms), normalize_openrouter(iso, now_ms))

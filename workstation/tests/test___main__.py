@@ -314,6 +314,110 @@ class ComputePushStateTests(unittest.TestCase):
         self.assertNotIn("push:tokscale:max_ts_ms", new_state)
 
 
+class ComputeOpenrouterStateTests(unittest.TestCase):
+    """I3 fix-wave finding: the "existing mechanism" seam for persisting the
+    OpenRouter lane's own cumulative baseline -- derived from the lane's
+    RETURNED SAMPLES (the one channel that escapes the Lane/run_lanes
+    boundary), never from a lane mutating `state` in place (which run_lanes'
+    pre-loop `dict(state)` snapshot means never propagates to what's saved).
+    """
+
+    TODAY_START = _local_ms(2026, 8, 29, 0, 0, 0)
+    NOW = _local_ms(2026, 8, 29, 10, 0, 0)
+    YESTERDAY_END = _local_ms(2026, 8, 28, 23, 59, 59) + 999
+    TWO_DAYS_AGO_END = _local_ms(2026, 8, 27, 23, 59, 59) + 999
+
+    def _or_token_sample(self, model, kind, value, ts_ms):
+        return Sample(
+            metric="aiobs_tokens_total",
+            labels={"provider": "openrouter", "model": model, "kind": kind, "origin": "client"},
+            value=value,
+            ts_ms=ts_ms,
+        )
+
+    def _or_cost_sample(self, model, value, ts_ms):
+        return Sample(
+            metric="aiobs_cost_usd_total",
+            labels={"provider": "openrouter", "model": model, "origin": "client"},
+            value=value,
+            ts_ms=ts_ms,
+        )
+
+    def test_today_sample_never_persisted(self):
+        # Today's sample already includes a volatile, still-accruing delta --
+        # persisting it as next run's baseline would double-count once the
+        # day actually closes. Must be excluded every single run.
+        today_sample = self._or_token_sample("m", "input", 999.0, self.NOW)
+        new_state = main_mod.compute_openrouter_state([today_sample], {}, self.NOW)
+        self.assertNotIn("openrouter:cum:m:input", new_state)
+        self.assertNotIn("openrouter:last_date", new_state)
+
+    def test_past_day_sample_updates_cum_and_last_date(self):
+        sample = self._or_token_sample("m", "input", 1500.0, self.YESTERDAY_END)
+        new_state = main_mod.compute_openrouter_state([sample], {}, self.NOW)
+        self.assertEqual(new_state["openrouter:cum:m:input"], 1500.0)
+        self.assertEqual(new_state["openrouter:last_date"], "2026-08-28")
+
+    def test_cost_sample_uses_cost_pseudo_kind_key(self):
+        sample = self._or_cost_sample("m", 12.5, self.YESTERDAY_END)
+        new_state = main_mod.compute_openrouter_state([sample], {}, self.NOW)
+        self.assertEqual(new_state["openrouter:cum:m:cost"], 12.5)
+
+    def test_non_openrouter_sample_never_touches_openrouter_keys(self):
+        tokscale_sample = Sample(
+            metric="aiobs_tokens_total",
+            labels={"provider": "claude-code", "model": "m", "kind": "input", "origin": "client"},
+            value=5000.0,
+            ts_ms=self.YESTERDAY_END,
+        )
+        new_state = main_mod.compute_openrouter_state([tokscale_sample], {}, self.NOW)
+        self.assertEqual(new_state, {})
+
+    def test_lane_health_samples_ignored_no_provider_label(self):
+        up = Sample(metric="aiobs_lane_up", labels={"lane": "openrouter"}, value=1.0, ts_ms=self.NOW)
+        new_state = main_mod.compute_openrouter_state([up], {}, self.NOW)
+        self.assertEqual(new_state, {})
+
+    def test_last_date_advances_to_the_newest_past_day_seen(self):
+        older = self._or_token_sample("m", "input", 1000.0, self.TWO_DAYS_AGO_END)
+        newer = self._or_token_sample("m", "output", 200.0, self.YESTERDAY_END)
+        new_state = main_mod.compute_openrouter_state([older, newer], {}, self.NOW)
+        self.assertEqual(new_state["openrouter:last_date"], "2026-08-28")  # newer, not older
+
+    def test_last_date_never_regresses_below_prior_state(self):
+        prior = {"openrouter:last_date": "2026-08-28"}
+        older_sample = self._or_token_sample("m", "input", 1000.0, self.TWO_DAYS_AGO_END)
+        new_state = main_mod.compute_openrouter_state([older_sample], prior, self.NOW)
+        self.assertEqual(new_state["openrouter:last_date"], "2026-08-28")
+
+    def test_prior_state_keys_carried_forward_untouched(self):
+        prior = {"lane:openrouter:last_success_ms": 123456, "push:tokscale:max_ts_ms": 999}
+        sample = self._or_token_sample("m", "input", 1500.0, self.YESTERDAY_END)
+        new_state = main_mod.compute_openrouter_state([sample], prior, self.NOW)
+        self.assertEqual(new_state["lane:openrouter:last_success_ms"], 123456)
+        self.assertEqual(new_state["push:tokscale:max_ts_ms"], 999)
+        self.assertEqual(new_state["openrouter:cum:m:input"], 1500.0)
+
+    def test_no_openrouter_samples_returns_prior_state_unchanged(self):
+        prior = {"some": "thing"}
+        new_state = main_mod.compute_openrouter_state([], prior, self.NOW)
+        self.assertEqual(new_state, prior)
+        self.assertIsNot(new_state, prior)  # still a copy, matching compute_push_state's own contract
+
+    def test_multiple_models_and_kinds_tracked_independently(self):
+        samples = [
+            self._or_token_sample("a", "input", 10.0, self.YESTERDAY_END),
+            self._or_token_sample("a", "output", 20.0, self.YESTERDAY_END),
+            self._or_token_sample("b", "input", 30.0, self.YESTERDAY_END),
+            self._or_cost_sample("a", 1.5, self.YESTERDAY_END),
+        ]
+        new_state = main_mod.compute_openrouter_state(samples, {}, self.NOW)
+        self.assertEqual(new_state["openrouter:cum:a:input"], 10.0)
+        self.assertEqual(new_state["openrouter:cum:a:output"], 20.0)
+        self.assertEqual(new_state["openrouter:cum:b:input"], 30.0)
+        self.assertEqual(new_state["openrouter:cum:a:cost"], 1.5)
+
+
 class MainEntrypointTests(unittest.TestCase):
     def setUp(self):
         tmp_dir = tempfile.TemporaryDirectory()
@@ -473,6 +577,91 @@ class MainEntrypointTests(unittest.TestCase):
 
         self.assertIn(old_sample, first_call_samples)
         self.assertNotIn(old_sample, second_call_samples)
+
+    def test_save_state_failure_prints_prefixed_message_and_exits_1(self):
+        # I2 fix-wave finding (deferred item): a failed save_state() must not
+        # crash with a raw traceback -- it should behave like the other
+        # graceful failure paths in main() (missing config, failed push):
+        # a single "aiobs_collector: ..." line on stderr, exit code 1.
+        config = _write_config(os.path.join(self.tmp, "estate.env"), AIOBS_LANES="")
+        with patch("aiobs_collector.__main__.push_samples"):
+            with patch(
+                "aiobs_collector.__main__.save_state", side_effect=OSError("disk full")
+            ):
+                stderr = io.StringIO()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    with contextlib.redirect_stderr(stderr):
+                        code = main_mod.main(["--config", config])
+        self.assertEqual(code, 1)
+        self.assertIn("aiobs_collector:", stderr.getvalue())
+        self.assertIn("disk full", stderr.getvalue())
+
+    def test_openrouter_state_persists_across_runs_through_real_main(self):
+        # End-to-end proof of the I3 fix through the REAL main() plumbing
+        # (not just compute_openrouter_state/normalize_openrouter in
+        # isolation): run 1's past-day sample gets folded into persisted
+        # state; run 2's fake lane reads that state back and adds a new
+        # day's delta on top -- proving the "existing mechanism" seam
+        # (deriving state from returned Samples, since a lane cannot make a
+        # `state` mutation of its own stick) actually round-trips end to end.
+        state_dir = os.path.join(self.tmp, "state")
+        config = _write_config(
+            os.path.join(self.tmp, "estate.env"), AIOBS_LANES="openrouter", AIOBS_STATE_DIR=state_dir
+        )
+        day1_ts = _local_ms(2026, 8, 20, 23, 59, 59) + 999
+        day2_ts = _local_ms(2026, 8, 21, 23, 59, 59) + 999
+
+        class _Run1Lane:
+            name = "openrouter"
+
+            def collect(self, cfg, state):
+                return [
+                    Sample(
+                        metric="aiobs_tokens_total",
+                        labels={"provider": "openrouter", "model": "m", "kind": "input", "origin": "client"},
+                        value=1000.0,
+                        ts_ms=day1_ts,
+                    )
+                ]
+
+        class _Run2Lane:
+            # Reads back whatever run 1 persisted and adds a "new day"'s
+            # delta on top -- exactly what the real
+            # normalize_openrouter(doc, now_ms, state) does.
+            name = "openrouter"
+
+            def collect(self, cfg, state):
+                baseline = state.get("openrouter:cum:m:input", 0.0)
+                return [
+                    Sample(
+                        metric="aiobs_tokens_total",
+                        labels={"provider": "openrouter", "model": "m", "kind": "input", "origin": "client"},
+                        value=baseline + 250.0,
+                        ts_ms=day2_ts,
+                    )
+                ]
+
+        with patch.dict("aiobs_collector.__main__._KNOWN_LANES", {"openrouter": _Run1Lane}, clear=True):
+            with patch("aiobs_collector.__main__.push_samples"):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    code1 = main_mod.main(["--config", config])
+        self.assertEqual(code1, 0)
+
+        persisted = load_state(state_dir)
+        self.assertEqual(persisted.get("openrouter:cum:m:input"), 1000.0)
+        self.assertEqual(persisted.get("openrouter:last_date"), "2026-08-20")
+
+        with patch.dict("aiobs_collector.__main__._KNOWN_LANES", {"openrouter": _Run2Lane}, clear=True):
+            with patch("aiobs_collector.__main__.push_samples"):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    code2 = main_mod.main(["--config", config])
+        self.assertEqual(code2, 0)
+
+        persisted2 = load_state(state_dir)
+        # 1000 (seeded from run 1's persisted state) + 250 (run 2's new
+        # delta) -- NOT just 250, which is what the pre-fix "recompute from
+        # scratch" behavior would have left as the last-seen value.
+        self.assertEqual(persisted2.get("openrouter:cum:m:input"), 1250.0)
 
     def test_lane_failure_still_exits_0_and_pushes_lane_up_zero_for_it(self):
         # Fix round 1 regression: a lane's collect() raising was already

@@ -65,6 +65,7 @@ import time
 import urllib.error
 import urllib.request
 from datetime import datetime
+from typing import Optional
 
 from aiobs_collector.core import Sample, load_config
 
@@ -107,7 +108,7 @@ def _local_date_str(now_ms: int) -> str:
     return datetime.fromtimestamp(now_ms / 1000).date().isoformat()
 
 
-def normalize_openrouter(doc: dict, now_ms: int) -> list[Sample]:
+def normalize_openrouter(doc: dict, now_ms: int, state: Optional[dict] = None) -> list[Sample]:
     """Pure normalizer: an `/api/v1/activity` document -> frozen-contract Samples.
 
     First aggregates `doc["data"]` rows into a per (date, model) daily
@@ -129,10 +130,55 @@ def normalize_openrouter(doc: dict, now_ms: int) -> list[Sample]:
     "model", non-dict rows, ...) degrades to fewer Samples, never an
     exception -- same "empty lane reports zero, never fails" contract as
     lane_tokscale.
+
+    `state` (fix-wave finding I3 -- the 30-day-window cumulative-corruption
+    fix): OpenRouter's `/api/v1/activity` only ever reports a rolling ~30-day
+    window. Recomputing "cumulative to date" from `doc` alone, from scratch,
+    every run -- which is exactly what happens when `state` is None/empty,
+    preserving this function's original behavior for a caller that has none
+    -- silently REGRESSES the reported running total once a day with real
+    usage ages out of that window: a genuine Prometheus-counter monotonicity
+    violation, not merely a cosmetic wobble. Fix: when given, `state` carries
+    forward, from the previous successful run, `openrouter:cum:<model>:<kind>`
+    (token running totals; `<kind>` is `input`/`output`) and
+    `openrouter:cum:<model>:cost` (cost, using the fixed literal `"cost"` as
+    a pseudo-kind for this state key's namespace only -- never written onto
+    a Sample's own labels, which stay exactly as before), plus a single
+    `openrouter:last_date` watermark: the newest calendar date whose
+    contribution has already been folded permanently into those totals.
+    Every `daily` bucket dated `<= last_date` is skipped outright here --
+    already accounted for, whether or not it is still inside the API's
+    current window -- and the running-total accumulators below are SEEDED
+    from `state` (lazily, the first time each (model, kind)/model key is
+    touched this run) rather than starting at zero.
+
+    Today is never skipped by this filter: `state["openrouter:last_date"]`
+    is written by the collector's `__main__.compute_openrouter_state` only
+    from PAST-day samples, so it can never advance to include a day that has
+    not closed yet -- today's date is therefore always `> last_date`, and
+    gets walked (and re-emitted) on every run, same as before. That is what
+    keeps today's semantics exactly as they always were: every run re-derives
+    "baseline through yesterday (frozen, from `state`) + today's freshly
+    refetched full-day total", never a stale partial-day snapshot, and this
+    function itself needs no special-casing for "today" beyond the existing
+    timestamp rule above -- see `__main__.compute_openrouter_state`'s own
+    docstring for the other half of this mechanism (why persistence, not
+    this function, is where "today" is excluded, and why that seam was
+    chosen over having this lane write into `state` directly).
+
+    Whichever days DO get walked -- typically one historical catch-up day
+    (yesterday, now closed) plus today, but possibly more after a gap in
+    collector uptime, or none beyond today on a same-day rerun -- behave
+    exactly as the paragraphs above describe: ascending order, one Sample
+    per (day, model) counter that actually moved, cumulative value carried
+    through, end-of-day-local timestamp (or `now_ms` for today).
     """
     rows = doc.get("data")
     if not isinstance(rows, list):
         return []
+
+    state = state or {}
+    last_date = state.get("openrouter:last_date") or ""
 
     daily: dict[tuple[str, str], dict[str, float]] = {}
     for row in rows:
@@ -155,6 +201,8 @@ def normalize_openrouter(doc: dict, now_ms: int) -> list[Sample]:
     samples: list[Sample] = []
 
     for date_str, model in sorted(daily.keys()):
+        if date_str <= last_date:
+            continue  # already folded into state's persisted baseline -- see docstring
         deltas = daily[(date_str, model)]
         ts_ms = now_ms if date_str == today_str else _end_of_day_local_ms(date_str)
 
@@ -163,7 +211,11 @@ def normalize_openrouter(doc: dict, now_ms: int) -> list[Sample]:
             if not delta:
                 continue  # zero/missing that day -- nothing new to report
             key = (model, kind)
-            token_running[key] = token_running.get(key, 0.0) + delta
+            if key not in token_running:
+                # first touch this run -- seed from the persisted baseline,
+                # not zero (empty/absent state -> 0.0, same as before)
+                token_running[key] = state.get(f"openrouter:cum:{model}:{kind}", 0.0)
+            token_running[key] += delta
             samples.append(
                 Sample(
                     metric="aiobs_tokens_total",
@@ -180,7 +232,9 @@ def normalize_openrouter(doc: dict, now_ms: int) -> list[Sample]:
 
         cost_delta = deltas["cost"]
         if cost_delta:
-            cost_running[model] = cost_running.get(model, 0.0) + cost_delta
+            if model not in cost_running:
+                cost_running[model] = state.get(f"openrouter:cum:{model}:cost", 0.0)
+            cost_running[model] += cost_delta
             samples.append(
                 Sample(
                     metric="aiobs_cost_usd_total",
@@ -218,7 +272,16 @@ def _fetch_activity(key: str, path: str, var_name: str) -> dict:
 
 
 class OpenRouterLane:
-    """Lane: direct OpenRouter token/cost usage, via the official activity API."""
+    """Lane: direct OpenRouter token/cost usage, via the official activity API.
+
+    `state` (the same dict `run_lanes` hands every lane) is read to seed
+    `normalize_openrouter`'s running totals and last-processed-date watermark
+    -- fixing the 30-day-window cumulative-corruption bug (I3). This lane
+    never writes to `state` itself: a lane-side mutation would not survive
+    `run_lanes`/`main()` anyway (see `__main__.compute_openrouter_state`'s
+    docstring for why), so persistence happens there instead, derived from
+    this lane's returned Samples.
+    """
 
     name = "openrouter"
 
@@ -247,4 +310,4 @@ class OpenRouterLane:
             key = None  # drop the local reference to the secret promptly
 
         now_ms = int(time.time() * 1000)
-        return normalize_openrouter(doc, now_ms)
+        return normalize_openrouter(doc, now_ms, state)

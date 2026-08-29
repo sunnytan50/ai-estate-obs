@@ -6,6 +6,8 @@ Sample, render_exposition, load_config, load_state, save_state, Lane, run_lanes.
 
 import json
 import os
+import sys
+import traceback
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -176,7 +178,14 @@ def run_lanes(
     appended and state[f"lane:{name}:last_success_ms"] is set to now_ms. On
     failure -- any Exception, not BaseException, so Ctrl-C still works --
     the prior last_success (if any) is kept and the lane contributes no
-    samples of its own.
+    samples of its own. The failure is never silent: one line naming the
+    lane and the exception type/message, plus the full traceback, is
+    printed to stderr (never stdout -- stdout is reserved for `--dry-run`'s
+    exposition and must stay parseable) so it reaches whatever log the
+    launchd/cron/systemd caller redirects stderr to. No Sample, no state
+    key, and no other return value carries this -- it is a side effect
+    only, so this function's signature and return shape stay exactly as
+    documented below.
 
     Every lane always gets an `aiobs_lane_up{lane=}` sample (1.0 on success,
     0.0 on failure). When a last_success exists (fresh or carried over from
@@ -195,7 +204,12 @@ def run_lanes(
             samples.extend(lane_samples)
             new_state[key] = now_ms
             up_value = 1.0
-        except Exception:
+        except Exception as exc:
+            print(
+                f"aiobs_collector: lane {lane.name} failed: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            traceback.print_exc()
             up_value = 0.0
 
         samples.append(

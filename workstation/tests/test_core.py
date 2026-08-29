@@ -5,7 +5,9 @@ Runnable with no environment variables, from either location:
     python3 -m unittest discover -s tests -v                # from workstation/
 """
 
+import contextlib
 import dataclasses
+import io
 import os
 import stat
 import sys
@@ -367,6 +369,36 @@ class RunLanesTests(unittest.TestCase):
         self.assertEqual(ts_samples[0].value, prior_ms / 1000.0)
         self.assertEqual(ts_samples[0].ts_ms, self.NOW_MS)
         self.assertEqual(_find(samples, "aiobs_lane_up", lane="bad")[0].value, 0.0)
+
+    def test_bad_lane_failure_is_logged_to_stderr_with_name_and_exc_type(self):
+        # I2 fix-wave finding: a lane exception must never be silent -- README.md's
+        # troubleshooting section promises "check the collector's log ... for the
+        # actual exception", so it must actually land there (stderr, which the
+        # launchd/cron/systemd caller redirects to that log).
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            run_lanes([_BadLane()], cfg={}, state={}, now_ms=self.NOW_MS)
+        output = stderr.getvalue()
+        self.assertIn("aiobs_collector:", output)
+        self.assertIn("bad", output)
+        self.assertIn("RuntimeError", output)
+        self.assertIn("boom", output)
+
+    def test_bad_lane_failure_traceback_on_stderr_not_stdout(self):
+        # stdout is reserved for --dry-run's exposition (must stay parseable) --
+        # the failure log must go to stderr exclusively.
+        stderr = io.StringIO()
+        stdout = io.StringIO()
+        with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(stdout):
+            run_lanes([_BadLane()], cfg={}, state={}, now_ms=self.NOW_MS)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("Traceback (most recent call last)", stderr.getvalue())
+
+    def test_good_lane_failure_logging_silent_no_stderr_output(self):
+        stderr = io.StringIO()
+        with contextlib.redirect_stderr(stderr):
+            run_lanes([_GoodLane()], cfg={}, state={}, now_ms=self.NOW_MS)
+        self.assertEqual(stderr.getvalue(), "")
 
     def test_input_state_dict_is_not_mutated(self):
         input_state = {"lane:good:last_success_ms": 1}

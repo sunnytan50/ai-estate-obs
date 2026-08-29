@@ -81,7 +81,7 @@ def _local_midnight_ms(now_ms: int) -> int:
     return int(midnight.timestamp() * 1000)
 
 
-def _lane_for_sample(sample) -> str | None:
+def _lane_for_sample(sample) -> "str | None":
     """Attribute a data Sample back to the lane that produced it, for
     per-lane push-dedupe state.
 
@@ -192,6 +192,81 @@ def compute_push_state(samples: list, prior_state: dict, now_ms: int) -> dict:
     return new_state
 
 
+def compute_openrouter_state(samples: list, prior_state: dict, now_ms: int) -> dict:
+    """The state to persist for the OpenRouter lane's own cumulative-window fix.
+
+    `OpenRouterLane.collect(cfg, state)` reads its starting per-(model,kind)
+    baseline and its `openrouter:last_date` watermark out of the `state` it is
+    handed -- but it cannot make writes to that same dict stick: `run_lanes`
+    snapshots `new_state = dict(state)` *before* calling any lane, and every
+    lane is handed that same pre-snapshot original `state` object (never the
+    evolving `new_state`) -- see `core.run_lanes`'s own docstring and its
+    `test_each_lane_receives_the_original_state_not_an_evolving_one` test. A
+    lane mutating `state` in place is therefore a dead end: `new_state` (and
+    everything `main()` ultimately saves) was already copied before the
+    mutation happened. Frozen signatures rule out changing that copy-timing.
+
+    So -- exactly like `compute_push_state` above, the "existing mechanism"
+    for exactly this kind of problem -- the new state is derived here, purely
+    from the samples a lane actually returned (the one channel that *does*
+    escape the Lane/run_lanes boundary), never from anything a lane wrote
+    into `state` itself.
+
+    Only a PAST-DAY (`ts_ms` strictly before local midnight of `now_ms`)
+    `provider="openrouter"` sample updates `openrouter:cum:<model>:<kind>`
+    (token samples; `<kind>` is `input`/`output`) or `openrouter:cum:<model>:cost`
+    (cost samples -- cost has no real `kind` label, so `cost` is used as a
+    literal, fixed pseudo-kind for this state key's namespace only, never
+    written onto a Sample's own labels) and advances `openrouter:last_date`.
+    Today's sample (`ts_ms >= today's local midnight`, i.e. the lane's own
+    `now_ms` snapshot) is deliberately EXCLUDED every run: it is still
+    accruing, so persisting it would mean next run has to somehow "un-count"
+    part of a day it already folded in. Leaving today out of the persisted
+    baseline sidesteps that entirely -- `normalize_openrouter` re-derives
+    "baseline through yesterday (frozen, from state) + today's freshly
+    refetched full-day total" on every single run, which is correct with no
+    extra bookkeeping (today's date is always `> last_date` by construction,
+    since `last_date` can never advance to include a day that has not closed
+    yet). Once a day stops being "today", its now-final delta is folded
+    permanently into the baseline exactly once, on the first run after it
+    closes -- see `lane_openrouter.normalize_openrouter`'s own docstring for
+    that half of the mechanism.
+
+    A day with a zero delta for a given (model, kind) never produced a
+    Sample in the first place (`normalize_openrouter`'s sparse-emission
+    rule) -- harmless here too: it simply never advances that one counter,
+    same as if nothing had happened.
+    """
+    today_start_ms = _local_midnight_ms(now_ms)
+    new_state = dict(prior_state)
+    last_date = new_state.get("openrouter:last_date")
+
+    for sample in samples:
+        if sample.labels.get("provider") != "openrouter" or sample.ts_ms >= today_start_ms:
+            continue
+        model = sample.labels.get("model")
+        if not model:
+            continue
+
+        if sample.metric == "aiobs_tokens_total":
+            kind = sample.labels.get("kind")
+            if not kind:
+                continue
+            new_state[f"openrouter:cum:{model}:{kind}"] = sample.value
+        elif sample.metric == "aiobs_cost_usd_total":
+            new_state[f"openrouter:cum:{model}:cost"] = sample.value
+        else:
+            continue
+
+        date_str = datetime.fromtimestamp(sample.ts_ms / 1000).date().isoformat()
+        if last_date is None or date_str > last_date:
+            last_date = date_str
+
+    if last_date is not None:
+        new_state["openrouter:last_date"] = last_date
+    return new_state
+
+
 def _parse_args(argv):
     parser = argparse.ArgumentParser(
         prog="aiobs_collector", description="Push AI-estate token/cost samples to VictoriaMetrics."
@@ -257,7 +332,12 @@ def main(argv=None) -> int:
     print(f"aiobs_collector: pushed {len(to_push)} samples to {vm_base_url} (lanes: {lane_names})")
 
     final_state = compute_push_state(samples, new_state, now_ms)
-    save_state(state_dir, final_state)
+    final_state = compute_openrouter_state(samples, final_state, now_ms)
+    try:
+        save_state(state_dir, final_state)
+    except Exception as exc:
+        print(f"aiobs_collector: failed to save state: {exc}", file=sys.stderr)
+        return 1
     return 0
 
 

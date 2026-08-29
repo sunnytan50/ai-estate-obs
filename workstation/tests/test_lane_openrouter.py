@@ -67,6 +67,10 @@ def _find(samples, metric, **labels):
     ]
 
 
+def _row(date, model, prompt=0, completion=0, usage=0.0):
+    return {"date": date, "model": model, "prompt_tokens": prompt, "completion_tokens": completion, "usage": usage}
+
+
 def _mock_response(doc: dict) -> MagicMock:
     """A MagicMock standing in for what `urllib.request.urlopen` returns,
     usable as `with urlopen(...) as resp: resp.read()`.
@@ -345,6 +349,129 @@ class NormalizeOpenRouterMalformedDocTests(unittest.TestCase):
     def test_non_dict_row_is_skipped_without_error(self):
         doc = {"data": ["not-a-dict", 123, None]}
         self.assertEqual(normalize_openrouter(doc, self.NOW), [])
+
+
+class NormalizeOpenRouterStatePersistenceTests(unittest.TestCase):
+    """I3 fix-wave finding: OpenRouter's `/api/v1/activity` only reports a
+    rolling ~30-day window; recomputing "cumulative to date" from `doc`
+    alone, from scratch, every run silently regresses the reported total
+    once a day with real usage ages out of that window. `state` fixes this
+    by seeding running totals and gating which days get walked at all.
+    """
+
+    def test_first_run_empty_state_matches_legacy_no_state_call(self):
+        doc = _load_fixture()
+        now_ms = _local_ms(2026, 8, 30, 10, 0, 0)
+        legacy = normalize_openrouter(doc, now_ms)
+        explicit_none = normalize_openrouter(doc, now_ms, None)
+        explicit_empty = normalize_openrouter(doc, now_ms, {})
+        self.assertEqual(legacy, explicit_none)
+        self.assertEqual(legacy, explicit_empty)
+        self.assertGreater(len(legacy), 0)
+
+    def test_restart_with_state_seeds_baseline_instead_of_recomputing_from_scratch(self):
+        # Simulates a fresh process instance (e.g. after a restart) picking
+        # up where a prior run left off: 2026-08-20 was already folded into
+        # the persisted baseline (5000 input tokens); this run's doc only
+        # reports a NEW day, 2026-08-21.
+        doc = {"data": [_row("2026-08-21", "some/model", prompt=300)]}
+        now_ms = _local_ms(2026, 8, 25, 10, 0, 0)
+        state = {"openrouter:last_date": "2026-08-20", "openrouter:cum:some/model:input": 5000.0}
+
+        samples = normalize_openrouter(doc, now_ms, state)
+
+        rows = _find(samples, "aiobs_tokens_total", model="some/model", kind="input")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].value, 5300.0)  # 5000 (persisted) + 300 (new) -- not just 300
+
+    def test_date_at_or_before_last_date_is_skipped_never_recounted(self):
+        # A day already folded into the persisted baseline must never be
+        # re-added, even if the API's rolling window still happens to still
+        # report it this run.
+        doc = {
+            "data": [
+                _row("2026-08-20", "some/model", prompt=999),  # <= last_date -- must be ignored
+                _row("2026-08-21", "some/model", prompt=300),  # new
+            ]
+        }
+        now_ms = _local_ms(2026, 8, 25, 10, 0, 0)
+        state = {"openrouter:last_date": "2026-08-20", "openrouter:cum:some/model:input": 5000.0}
+
+        samples = normalize_openrouter(doc, now_ms, state)
+
+        rows = _find(samples, "aiobs_tokens_total", model="some/model", kind="input")
+        self.assertEqual(len(rows), 1)          # only 2026-08-21 produced a Sample
+        self.assertEqual(rows[0].value, 5300.0)  # 2026-08-20's 999 never re-added
+
+    def test_window_slide_old_day_drops_out_totals_stay_monotonic(self):
+        # Run 1: the API's window covers day1 (08-01) + day2 (08-02).
+        model = "some/model"
+        doc_run1 = {"data": [_row("2026-08-01", model, prompt=1000), _row("2026-08-02", model, prompt=500)]}
+        now_run1 = _local_ms(2026, 8, 5, 10, 0, 0)
+        samples_run1 = normalize_openrouter(doc_run1, now_run1, {})
+        run1_rows = _find(samples_run1, "aiobs_tokens_total", model=model, kind="input")
+        self.assertEqual(run1_rows[-1].value, 1500.0)  # 1000 + 500
+
+        # State a correct implementation persists after run 1: baseline
+        # through the newest day processed (08-02), regardless of whether
+        # the API's window still shows it later.
+        state_after_run1 = {"openrouter:last_date": "2026-08-02", f"openrouter:cum:{model}:input": 1500.0}
+
+        # Run 2: the window has SLID -- day 08-01 has dropped out of `doc`
+        # entirely (the exact corruption trigger: the pre-fix code re-summed
+        # only what's in `doc`, so day1's 1000 would vanish from the total).
+        # A genuinely new day, 08-03, has real usage.
+        doc_run2 = {"data": [_row("2026-08-02", model, prompt=500), _row("2026-08-03", model, prompt=200)]}
+        now_run2 = _local_ms(2026, 8, 6, 10, 0, 0)
+        samples_run2 = normalize_openrouter(doc_run2, now_run2, state_after_run1)
+
+        rows_run2 = _find(samples_run2, "aiobs_tokens_total", model=model, kind="input")
+        self.assertEqual(len(rows_run2), 1)         # 08-02 <= last_date -- skipped, only 08-03 is new
+        self.assertEqual(rows_run2[0].value, 1700.0)  # 1500 + 200 -- monotonic, NOT 500+200=700
+
+    def test_window_slide_cost_also_stays_monotonic(self):
+        # Same window-slide scenario, exercised on the cost counter (a
+        # separate running-total dict, seeded from a different state key).
+        model = "some/model"
+        state = {"openrouter:last_date": "2026-08-02", f"openrouter:cum:{model}:cost": 12.5}
+        doc_run2 = {
+            "data": [
+                _row("2026-08-02", model, usage=999.0),  # <= last_date -- skipped
+                _row("2026-08-03", model, usage=1.5),    # new
+            ]
+        }
+        now_run2 = _local_ms(2026, 8, 6, 10, 0, 0)
+        samples = normalize_openrouter(doc_run2, now_run2, state)
+        cost_rows = _find(samples, "aiobs_cost_usd_total", model=model)
+        self.assertEqual(len(cost_rows), 1)
+        self.assertEqual(round(cost_rows[0].value, 2), 14.0)  # 12.5 + 1.5, not 999 re-added
+
+    def test_today_is_never_skipped_by_the_last_date_filter(self):
+        # last_date can equal yesterday while today (a later date) still
+        # must always be walked and re-emitted, every run.
+        model = "some/model"
+        state = {"openrouter:last_date": "2026-08-24", f"openrouter:cum:{model}:input": 100.0}
+        doc = {"data": [_row("2026-08-25", model, prompt=42)]}
+        now_ms = _local_ms(2026, 8, 25, 9, 0, 0)  # today == 2026-08-25
+        samples = normalize_openrouter(doc, now_ms, state)
+        rows = _find(samples, "aiobs_tokens_total", model=model, kind="input")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0].value, 142.0)
+        self.assertEqual(rows[0].ts_ms, now_ms)  # still today's now_ms semantics, unchanged
+
+    def test_multiple_models_seed_independently_from_state(self):
+        state = {
+            "openrouter:last_date": "2026-08-20",
+            "openrouter:cum:model/a:input": 1000.0,
+            "openrouter:cum:model/b:input": 50.0,
+        }
+        doc = {"data": [_row("2026-08-21", "model/a", prompt=10), _row("2026-08-21", "model/b", prompt=5)]}
+        now_ms = _local_ms(2026, 8, 25, 10, 0, 0)
+        samples = normalize_openrouter(doc, now_ms, state)
+        a_rows = _find(samples, "aiobs_tokens_total", model="model/a", kind="input")
+        b_rows = _find(samples, "aiobs_tokens_total", model="model/b", kind="input")
+        self.assertEqual(a_rows[0].value, 1010.0)
+        self.assertEqual(b_rows[0].value, 55.0)
 
 
 class OpenRouterLaneTests(unittest.TestCase):

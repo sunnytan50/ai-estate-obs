@@ -197,7 +197,9 @@ Expected: `ok` + `sh ok` (if PyYAML is absent in both interpreters, fall back to
 - [ ] **Step 5: Verify from the Mac** — `ssh my-vps "tailscale ip -4"` → write result into `config/estate.env` `AIOBS_HUB_TAILNET_IP`; then from Mac: `ping -c 2 <that IP>` and `tailscale status | grep remy` (Mac side shows the new peer). Expected: replies, peer listed.
 - [ ] **Step 6: Record** — no repo commit (env is untracked); note the IP in the task log.
 
----### Task 4: Deploy hub, verify over tailnet
+---
+
+### Task 4: Deploy hub, verify over tailnet
 
 **Files:** none new (uses Task 2 artifacts).
 

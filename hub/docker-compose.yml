@@ -14,6 +14,9 @@ services:
     environment:
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin
       GF_ANALYTICS_REPORTING_ENABLED: "false"
+      # interface binds to the tailnet only, so anonymous read access stays private to the tailnet
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
     volumes:
       - grafanadata:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

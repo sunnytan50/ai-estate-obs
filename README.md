@@ -5,7 +5,7 @@ One Grafana dashboard showing live and historical power draw (watts, utilization
 ## Architecture
 
 ```
-                 ┌──────────────────────────── cloud VPS (hub) ────────────────────────────┐
+                 ┌──────────────────────────── always-on Docker host (hub) ──────────────────┐
                  │  Tailscale (new)                                                          │
                  │  /opt/observability: docker compose                                       │
                  │    victoriametrics :8428  ◄── remote_write / import (tailnet only)        │
@@ -15,7 +15,7 @@ One Grafana dashboard showing live and historical power draw (watts, utilization
         ┌────────────────────┴─────────────┐   ┌────────────┴──────────────────────────┐
         │ Windows box / WSL2 (spoke, push) │   │ Mac workstation (spoke, push)         │
         │  nvidia_gpu_exporter :9835       │   │  collector.py (launchd, every 10 min) │
-        │  vmagent scrapes:                │   │   lane: tokscale --json               │
+        │  vmagent scrapes:                │   │   lane: tokscale graph                │
         │   localhost:8002/metrics (LLM)   │   │    (claude/codex/cursor/droid/hermes) │
         │   localhost:9835/metrics (GPU)   │   │   lane: OpenRouter activity API       │
         │  → remote_write to VPS :8428     │   │  → POST /api/v1/import/prometheus     │
@@ -77,23 +77,23 @@ Open `config/estate.env` in an editor and work through the steps below in order 
 
 1. Install Tailscale on the workstation too (or otherwise ensure it can reach the hub's tailnet IP).
 2. Fill in `AIOBS_LANES` (comma list — `tokscale`, `openrouter`, or both; an unknown lane name is a hard config error), `AIOBS_TOKSCALE_VERSION` (check `npm view tokscale version` for current), and `AIOBS_STATE_DIR`.
-3. **(Optional) OpenRouter lane:** create a *Management API Key* (not a regular completion key — OpenRouter treats these as separate credential classes) at [openrouter.ai/settings/management-keys](https://openrouter.ai/settings/management-keys). Put it in a plain `KEY=VALUE` file (same format as `estate.env` itself) at the path named by `AIOBS_OPENROUTER_ENV_FILE`, under the var name in `AIOBS_OPENROUTER_KEY_NAME` (default `OPENROUTER_MANAGEMENT_KEY`) — e.g. a line reading `OPENROUTER_MANAGEMENT_KEY=sk-or-...` in `~/.hermes/.env`. This key is read at runtime and **never copied into this repo**. Skipping this is fine: the lane simply stays fail-closed (`aiobs_lane_up{lane="openrouter"}` reads `0`) until you add it — see [Troubleshooting](#troubleshooting).
+3. **(Optional) OpenRouter lane:** create a *Management API Key* (not a regular completion key — OpenRouter treats these as separate credential classes) at [openrouter.ai/settings/management-keys](https://openrouter.ai/settings/management-keys). Put it in a plain `KEY=VALUE` file (same format as `estate.env` itself) at the path named by `AIOBS_OPENROUTER_ENV_FILE`, under the var name in `AIOBS_OPENROUTER_KEY_NAME` (default `OPENROUTER_MANAGEMENT_KEY`) — e.g. a line reading `OPENROUTER_MANAGEMENT_KEY=sk-or-...` in `~/.config/aiobs/openrouter.env` (any path/file works — that's just an example location; point `AIOBS_OPENROUTER_ENV_FILE` at wherever you keep it). This key is read at runtime and **never copied into this repo**. Skipping this is fine: the lane simply stays fail-closed (`aiobs_lane_up{lane="openrouter"}` reads `0`) until you add it — see [Troubleshooting](#troubleshooting). Once keyed, the lane keeps its own running per-model totals in `AIOBS_STATE_DIR` across runs, so historical totals stay correct even after a day's usage ages out of OpenRouter's own ~30-day activity window — it is not a from-scratch recompute of whatever that window currently shows.
 4. Install the collector as a scheduled job:
    - **macOS:**
      ```bash
      bash workstation/install-collector.sh
      ```
      Installs a launchd user agent (`com.aiobs.collector`) that runs once immediately, then every 600s, logging to `~/Library/Logs/aiobs/collector.log`.
-   - **Linux:** no installer script ships for this yet — use cron or a systemd user timer calling the same entry point on the same ~600s cadence. Cron:
+   - **Linux:** no installer script ships for this yet — use cron or a systemd user timer calling the same entry point on the same ~600s cadence. Both examples below resolve `python3` the same way `workstation/install-collector.sh` does (`command -v python3`) rather than hardcoding a path like `/usr/bin/python3` — on many distros (and on macOS's own stock `/usr/bin/python3`) that path is a much older interpreter than whatever `python3` actually resolves to on `PATH`, and this project needs 3.9+. Cron (creates the log directory on every run, harmless once it already exists):
      ```cron
-     */10 * * * * cd /path/to/ai-estate-obs/workstation && /usr/bin/python3 -m aiobs_collector --config /path/to/ai-estate-obs/config/estate.env >> "$HOME/.local/state/aiobs/collector.log" 2>&1
+     */10 * * * * mkdir -p "$HOME/.local/state/aiobs" && cd /path/to/ai-estate-obs/workstation && $(command -v python3) -m aiobs_collector --config /path/to/ai-estate-obs/config/estate.env >> "$HOME/.local/state/aiobs/collector.log" 2>&1
      ```
-     or a systemd user timer (`~/.config/systemd/user/aiobs-collector.{service,timer}`):
+     or a systemd user timer (`~/.config/systemd/user/aiobs-collector.{service,timer}`) — a unit file isn't a shell, so `ExecStart` can't use `$(command -v python3)` directly; run `command -v python3` once yourself and paste the absolute path it prints:
      ```ini
      [Service]
      Type=oneshot
      WorkingDirectory=/path/to/ai-estate-obs/workstation
-     ExecStart=/usr/bin/python3 -m aiobs_collector --config /path/to/ai-estate-obs/config/estate.env
+     ExecStart=<output of `command -v python3`> -m aiobs_collector --config /path/to/ai-estate-obs/config/estate.env
      ```
      ```ini
      [Timer]
@@ -108,7 +108,7 @@ Open `config/estate.env` in an editor and work through the steps below in order 
    ```bash
    cd workstation && python3 -m aiobs_collector --config ../config/estate.env --backfill
    ```
-   Every subsequent run (the launchd/cron/timer cadence) only pushes what's new, via a small per-lane high-water-mark kept in `AIOBS_STATE_DIR`.
+   Every subsequent run (the launchd/cron/timer cadence) only pushes what's new, via a small per-lane high-water-mark kept in `AIOBS_STATE_DIR`. Run the same `--backfill` command again (once) any time you bump `AIOBS_TOKSCALE_VERSION` in `config/estate.env` — a newer `tokscale` release can compute historical values slightly differently, so re-running `--backfill` re-derives the whole history under the one now-pinned version instead of leaving old dates frozen at an older version's numbers.
 
 ### 4. Look at it
 
@@ -153,7 +153,7 @@ This system captures token counts, timestamps, model names, and cost only — **
 - **`aiobs_lane_up{lane="tokscale"} == 0`.** Check the collector's log (`~/Library/Logs/aiobs/collector.log` on macOS, or your cron/systemd redirect target on Linux) for the actual exception — common causes are `AIOBS_TOKSCALE_VERSION` pointing at a version that no longer exists on npm, or `npx` not being on the `PATH` launchd/cron/systemd actually runs with (the launchd plist explicitly adds the `npx` directory to its own minimal `PATH` for exactly this reason).
 - **A lane's `aiobs_lane_last_success_timestamp` series is entirely absent, not zero.** By design — that metric is only ever emitted once a lane has *actually* succeeded at least once. "Absent" and "zero" are deliberately different signals here: absent means "never succeeded," a real zero would mean "succeeded exactly at the Unix epoch."
 - **Extending the dashboards: don't reach for `increase()` on `aiobs_tokens_total` / `aiobs_cost_usd_total`.** These are cumulative counters pushed at roughly one point per calendar day (plus a live point for "today"). That shape — long, roughly day-spaced gaps between samples as the norm rather than the exception — sits squarely in the case VictoriaMetrics' `increase()` counter-reset/staleness heuristic is not tuned for: verified live against this project's own real data, `increase(aiobs_tokens_total{...}[1d])` returned wildly different (both over- and under-counting, by as much as ~27x) results depending on window size and the exact instant it was evaluated at, with no window size found that was reliably correct. Every panel on this dashboard that reads these two metrics instead uses a direct two-point subtraction — `max_over_time(metric[W]) - (max_over_time(metric[W] offset D) or (max_over_time(metric[W])*0))` — verified byte-exact against a raw `/api/v1/export` ground-truth cross-check. Two details matter if you copy this pattern: (1) use `X or (X*0)` as the zero-fallback, **not** `X or vector(0)` — the latter has no labels, so on a grouped/multi-series query it silently *drops* (rather than zero-fills) any series that lacks an exact label match on the offset side; caught live on a per-model breakdown that came back missing 6 of 7 models before the fix. (2) For `stat`/instant-style panels, issue the query as a **range** query reduced to its last value (`instant: false, range: true`, `reduceOptions.calcs: ["lastNotNull"]`), not as a genuine instant query (`instant: true, range: false`) — verified live that VictoriaMetrics' instant-query path can return a materially wrong answer for this same `max_over_time(...) offset <large duration>` shape at an evaluation instant where the equivalent range query gets it exactly right; this project's Month-to-Date, Model Breakdown, and Local vs Cloud Share panels all route around it this way. Separately, the two `aiobs_lane_*` health metrics are plain gauges with no counter arithmetic at all, but a **bare** instant selector on them can still intermittently return no data at all: Prometheus/VictoriaMetrics apply a short (~5 minute) default staleness lookback to an un-windowed instant query, which is shorter than this collector's 600s push cadence. Wrap them in `last_over_time(metric[20m])` (as the shipped Collector Lane Up / Freshness panels do) rather than querying the bare metric name.
-- **A GPU box running llama.cpp:** this project's own reference box currently runs SGLang, so `sglang:*` metric names are live-verified end-to-end; the `llamacpp_*` names used in dashboard queries (`llamacpp_tokens_predicted_total`, `llamacpp_prompt_tokens_total`) match `llama-server --metrics`'s documented exposition but have **not** been independently confirmed against a live llama.cpp lane by this project. If your panels come up empty on the local-inference rows, check your server's actual `/metrics` output first.
+- **A GPU box running llama.cpp:** this project's own reference box currently runs SGLang, so `sglang:*` metric names are live-verified end-to-end. Dashboard queries treat llama.cpp's colon-namespaced metric names (`llamacpp:tokens_predicted_total`, `llamacpp:prompt_tokens_total`, per `llama-server --metrics`'s documented exposition) as primary, with the underscore spelling (`llamacpp_tokens_predicted_total`, `llamacpp_prompt_tokens_total`) queried alongside as a fallback — **neither** has been independently confirmed against a live llama.cpp lane by this project yet; that verification is owner-gated (needs a real llama.cpp box on the tailnet) and not yet done. If your panels come up empty on the local-inference rows, check your server's actual `/metrics` output first — the panel queries union both spellings (via a label-preserving zero-fallback, so having data under only one spelling is fine), so a genuinely different naming scheme on your build is the most likely cause.
 
 ## License
 

@@ -94,9 +94,9 @@ State: a small JSON state file (last pushed day per lane) under `~/.local/state/
 One flagship **Estate** dashboard, dark theme, four rows:
 
 1. **Power** — live watts gauge, 24 h watts curve overlaid with tok/s (dual axis), kWh/day (`avg_over_time(power)[1d] × 24 / 1000`), VRAM, temperature.
-2. **Local inference** — tok/s, prompt vs generation volume by model lane, TTFT/latency percentiles, request rate. Queries written per lane prefix (`sglang:*`, llama.cpp's) and unioned.
+2. **Local inference** — tok/s, prompt vs generation volume by model lane, TTFT/latency percentiles, request rate. Queries written per lane prefix (`sglang:*`, llama.cpp's) and unioned. [As-built: TTFT/request-rate live in the inference-detail dashboard; all-estate cumulative counter omitted — Totals row carries share + health instead (final-review ruling).]
 3. **Cloud tokens** — stacked daily tokens by provider, cost/day, month-to-date totals, model breakdown.
-4. **Totals** — local vs cloud share, all-estate cumulative counter, collector lane health.
+4. **Totals** — local vs cloud share, all-estate cumulative counter, collector lane health. [As-built: TTFT/request-rate live in the inference-detail dashboard; all-estate cumulative counter omitted — Totals row carries share + health instead (final-review ruling).]
 
 Plus two seeded supporting dashboards: GPU detail (adapted from published nvidia_gpu_exporter dashboards 14574/25547) and inference-server detail (adapted from SGLang's official dashboard, queries verified per the naming-drift caveat). All provisioned from JSON in the repo — no click-built panels.
 

@@ -3,7 +3,9 @@
   "uid": "aiobs-estate",
   "title": "AI Estate",
   "description": "Flagship estate overview: GPU power/thermal, local inference throughput, cloud token/cost flow by provider, and collector lane health.",
-  "tags": ["aiobs"],
+  "tags": [
+    "aiobs"
+  ],
   "style": "dark",
   "timezone": "browser",
   "editable": true,
@@ -11,13 +13,47 @@
   "schemaVersion": 39,
   "version": 4,
   "refresh": "30s",
-  "time": { "from": "now-24h", "to": "now" },
-  "templating": { "list": [] },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "GPU Detail",
+      "tooltip": "Open the GPU detail dashboard",
+      "type": "link",
+      "url": "/d/aiobs-gpu/gpu-detail"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Inference Detail",
+      "tooltip": "Open the inference detail dashboard",
+      "type": "link",
+      "url": "/d/aiobs-inference/inference-detail"
+    }
+  ],
+  "templating": {
+    "list": []
+  },
   "annotations": {
     "list": [
       {
         "builtIn": 1,
-        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
         "enable": true,
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
@@ -32,7 +68,12 @@
       "type": "row",
       "title": "Power",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "panels": []
     },
     {
@@ -40,20 +81,39 @@
       "type": "gauge",
       "title": "GPU Power Now",
       "description": "Live nvidia-smi power draw, the GPU box.",
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 1 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "unit": "watt",
           "min": 0,
           "max": 600,
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 450 },
-              { "color": "red", "value": 550 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 450
+              },
+              {
+                "color": "red",
+                "value": 550
+              }
             ]
           }
         },
@@ -63,11 +123,20 @@
         "orientation": "auto",
         "showThresholdLabels": false,
         "showThresholdMarkers": true,
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "nvidia_smi_power_draw_watts",
           "legendFormat": "__auto",
           "instant": true,
@@ -79,14 +148,25 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Watts vs Tok/s (24h)",
-      "description": "Power draw (left axis) overlaid with local server generation throughput (right axis). llama.cpp exposes colon-namespaced metric names (llamacpp:*, per llama-server's --metrics documentation) -- queried as primary, with the underscore spelling (llamacpp_*) kept as a fallback until independently confirmed live against this project's own llama.cpp lane (owner-gated; see README). Combined with sglang via a 3-way label-preserving zero-fallback union (not a bare 'or') so that if more than one of the three ever reports data in the same window, none is silently dropped. llama.cpp legs read empty today -- expected, this box currently runs sglang only.",
-      "gridPos": { "h": 8, "w": 12, "x": 6, "y": 1 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "title": "GPU Power",
+      "description": "Power draw of the GPU box. Shares its time axis (and the dashboard's shared crosshair) with Local Token Throughput directly below -- split from a former dual-axis watts+tok/s overlay so each measure keeps one honest axis.",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 6,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "unit": "watt",
+          "min": 0,
           "mappings": [],
           "custom": {
             "drawStyle": "line",
@@ -97,38 +177,117 @@
             "spanNulls": false,
             "axisPlacement": "auto",
             "axisLabel": "watts",
-            "scaleDistribution": { "type": "linear" },
-            "stacking": { "mode": "none", "group": "A" }
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
           }
         },
-        "overrides": [
-          {
-            "matcher": { "id": "byName", "options": "tok/s" },
-            "properties": [
-              { "id": "unit", "value": "short" },
-              { "id": "custom.axisPlacement", "value": "right" },
-              { "id": "custom.axisLabel", "value": "tok/s" }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "nvidia_smi_power_draw_watts",
           "legendFormat": "watts",
           "instant": false,
           "range": true,
           "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Local Token Throughput",
+      "description": "Prompt (prefill) and generation throughput on one tok/s axis. Both sglang and the documented llama.cpp metric spellings are combined with label-preserving zero fallbacks, so an absent lane cannot hide an active one.",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 6,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "min": 0,
+          "mappings": [],
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "axisLabel": "tok/s",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum(rate(sglang:prompt_tokens_total[1m])) or sum(rate(llamacpp:prompt_tokens_total[1m]))*0 or sum(rate(llamacpp_prompt_tokens_total[1m]))*0) + (sum(rate(llamacpp:prompt_tokens_total[1m])) or sum(rate(sglang:prompt_tokens_total[1m]))*0 or sum(rate(llamacpp_prompt_tokens_total[1m]))*0) + (sum(rate(llamacpp_prompt_tokens_total[1m])) or sum(rate(sglang:prompt_tokens_total[1m]))*0 or sum(rate(llamacpp:prompt_tokens_total[1m]))*0)",
+          "legendFormat": "prompt",
+          "instant": false,
+          "range": true,
+          "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "(sum(rate(sglang:generation_tokens_total[1m])) or sum(rate(llamacpp:tokens_predicted_total[1m]))*0 or sum(rate(llamacpp_tokens_predicted_total[1m]))*0) + (sum(rate(llamacpp:tokens_predicted_total[1m])) or sum(rate(sglang:generation_tokens_total[1m]))*0 or sum(rate(llamacpp_tokens_predicted_total[1m]))*0) + (sum(rate(llamacpp_tokens_predicted_total[1m])) or sum(rate(sglang:generation_tokens_total[1m]))*0 or sum(rate(llamacpp:tokens_predicted_total[1m]))*0)",
-          "legendFormat": "tok/s",
+          "legendFormat": "generation",
           "instant": false,
           "range": true,
           "refId": "B"
@@ -139,20 +298,44 @@
       "id": 4,
       "type": "stat",
       "title": "Energy Today",
-      "description": "Average power over the visible range, converted to kWh (avg_watts * range_seconds / 3600 / 1000).",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 1 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "description": "Energy since local midnight (panel pinned to now/d via timeFrom), computed with MetricsQL integrate() over the actual power samples, divided into kWh. Deliberately NOT avg_over_time(...) * $__range_s: that form extrapolates the sampled average across any unsampled hours, and on a partial-coverage day (exporter or box down for part of the day) it over-reported by ~3.4x, drifting DOWNWARD as idle samples accumulated -- caught live 2026-08-29 against a raw /api/v1/export trapezoid ground truth (integrate() matched within 0.25%). Issued as a range query reduced to its last value, per this project's standing rule for stat panels.",
+      "gridPos": {
+        "h": 3,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "unit": "kwatth",
           "decimals": 2,
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
@@ -160,25 +343,40 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "avg_over_time(nvidia_smi_power_draw_watts[$__range]) * $__range_s / 3600 / 1000",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "integrate(nvidia_smi_power_draw_watts[$__range]) / 3600 / 1000",
           "legendFormat": "kWh",
-          "instant": true,
-          "range": false,
+          "instant": false,
+          "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "timeFrom": "now/d",
+      "hideTimeOverride": true
     },
     {
       "id": 5,
       "type": "timeseries",
       "title": "VRAM / Temp",
       "description": "GPU memory used (left axis, binary bytes) vs die temperature (right axis, deg C).",
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "unit": "bytes",
           "mappings": [],
           "custom": {
@@ -190,28 +388,56 @@
             "spanNulls": false,
             "axisPlacement": "auto",
             "axisLabel": "VRAM",
-            "scaleDistribution": { "type": "linear" },
-            "stacking": { "mode": "none", "group": "A" }
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
           }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "temp °C" },
+            "matcher": {
+              "id": "byName",
+              "options": "temp °C"
+            },
             "properties": [
-              { "id": "unit", "value": "celsius" },
-              { "id": "custom.axisPlacement", "value": "right" },
-              { "id": "custom.axisLabel", "value": "temp" }
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.axisLabel",
+                "value": "temp"
+              }
             ]
           }
         ]
       },
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "nvidia_smi_memory_used_bytes",
           "legendFormat": "VRAM used",
           "instant": false,
@@ -219,7 +445,10 @@
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "nvidia_smi_temperature_gpu",
           "legendFormat": "temp °C",
           "instant": false,
@@ -233,42 +462,75 @@
       "type": "row",
       "title": "Local Inference",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
       "panels": []
     },
     {
       "id": 7,
       "type": "timeseries",
       "title": "Prompt vs Generation (by model)",
-      "description": "Server-side sglang: token rates by model_name, stacked. llama.cpp's colon-namespaced metric names (llamacpp:*, per llama-server's --metrics documentation) are queried as primary, with the underscore spelling (llamacpp_*) kept as a fallback until independently confirmed live against this project's own llama.cpp lane (owner-gated; see README). Combined with sglang via a 3-way label-preserving zero-fallback union (not a bare 'or') so that if more than one of the three ever reports data in the same window, none is silently dropped. llama.cpp legs read empty today -- expected, this box currently runs sglang only.",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "description": "Five-minute prompt and generation rates by model or active lane. The log10 axis keeps low generation rates visible beside prefill-heavy prompt traffic; zero-rate idle periods are not drawn on a logarithmic axis.",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "unit": "short",
           "mappings": [],
           "custom": {
             "drawStyle": "line",
             "lineWidth": 1,
-            "fillOpacity": 40,
+            "fillOpacity": 10,
             "pointSize": 5,
             "showPoints": "never",
             "spanNulls": false,
             "axisPlacement": "auto",
-            "scaleDistribution": { "type": "linear" },
-            "stacking": { "mode": "normal", "group": "A" }
+            "scaleDistribution": {
+              "type": "log",
+              "log": 10
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "axisLabel": "tok/s (log)"
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "(sum by (model_name)(rate(sglang:prompt_tokens_total[5m])) or sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m]))*0) + (sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m])) or sum by (model_name)(rate(sglang:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m]))*0) + (sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m])) or sum by (model_name)(rate(sglang:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m]))*0)",
           "legendFormat": "prompt {{model_name}}",
           "instant": false,
@@ -276,7 +538,10 @@
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "(sum by (model_name)(rate(sglang:generation_tokens_total[5m])) or sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m]))*0 or sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m]))*0) + (sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m])) or sum by (model_name)(rate(sglang:generation_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m]))*0) + (sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m])) or sum by (model_name)(rate(sglang:generation_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m]))*0)",
           "legendFormat": "generation {{model_name}}",
           "instant": false,
@@ -290,11 +555,21 @@
       "type": "timeseries",
       "title": "Latency (p50 / p95)",
       "description": "End-to-end request latency, sglang: histogram (verified live name/labels; llama.cpp lane not yet resident).",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "unit": "s",
           "mappings": [],
           "custom": {
@@ -305,19 +580,35 @@
             "showPoints": "auto",
             "spanNulls": false,
             "axisPlacement": "auto",
-            "scaleDistribution": { "type": "linear" },
-            "stacking": { "mode": "none", "group": "A" }
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "none" }
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "histogram_quantile(0.5, sum by (le)(rate(sglang:e2e_request_latency_seconds_bucket[5m])))",
           "legendFormat": "p50",
           "instant": false,
@@ -325,7 +616,10 @@
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "histogram_quantile(0.95, sum by (le)(rate(sglang:e2e_request_latency_seconds_bucket[5m])))",
           "legendFormat": "p95",
           "instant": false,
@@ -339,21 +633,36 @@
       "type": "row",
       "title": "Cloud Tokens",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
       "panels": []
     },
     {
       "id": 10,
       "type": "timeseries",
-      "title": "Daily Tokens by Provider",
+      "title": "Daily Tokens by Provider (30d)",
       "description": "Stacked daily token deltas per cloud-side provider (hermes excluded -- its client-side view mixes local + cloud-routed traffic and lives in its own attribution panel below, per the spec's anti-double-count rule). Query is a direct two-point counter subtraction -- max_over_time(...) minus its 1d-offset twin, each falling back to a zero-valued series that carries the SAME labels (X or (X*0), not X or vector(0), which has no labels and silently drops any series with no exact match) -- NOT increase(). increase() was verified live against this day-granular pushed data to be unreliable (window-size-dependent, off by up to ~27x); see README troubleshooting.",
       "timeFrom": "30d",
       "interval": "1d",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 19 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "unit": "short",
           "mappings": [],
           "custom": {
@@ -364,19 +673,35 @@
             "showPoints": "never",
             "spanNulls": false,
             "axisPlacement": "auto",
-            "scaleDistribution": { "type": "linear" },
-            "stacking": { "mode": "normal", "group": "A" }
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
           "legendFormat": "{{provider}}",
           "instant": false,
@@ -388,15 +713,25 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Cost per Day",
-      "description": "Daily cost delta per cloud-side provider (hermes excluded -- same anti-double-count rationale as Daily Tokens; hermes does carry real nonzero cost samples for its cloud-routed models, confirmed live, so this exclusion is load-bearing, not cosmetic). Same robust two-point subtraction as Daily Tokens by Provider, not increase(). Unstacked (grouped) -- the brief's table distinguishes this from the tokens panel, which is stacked.",
+      "title": "Cost per Day (30d)",
+      "description": "Daily client-side cost delta per cloud provider. Hermes is excluded to avoid double-counting its mixed local and cloud-routed client view. Uses the same two-point subtraction as the token panels, not increase().",
       "timeFrom": "30d",
       "interval": "1d",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 19 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "unit": "currencyUSD",
           "mappings": [],
           "custom": {
@@ -407,20 +742,36 @@
             "showPoints": "never",
             "spanNulls": false,
             "axisPlacement": "auto",
-            "scaleDistribution": { "type": "linear" },
-            "stacking": { "mode": "none", "group": "A" }
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_cost_usd_total{provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_cost_usd_total{provider!=\"hermes\"}[400d])*0)))",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
           "legendFormat": "{{provider}}",
           "instant": false,
           "range": true,
@@ -435,34 +786,62 @@
       "description": "Cumulative tokens since the start of the current calendar month, per cloud-side provider (hermes excluded). Panel time range is pinned to now/M via timeFrom, independent of the dashboard's own 24h default. Deliberately issued as a range query reduced to its last point, not an instant query: verified live that VictoriaMetrics' instant-query path (/api/v1/query) can return a materially wrong result for this same max_over_time+large-offset expression at the exact same evaluation instant an identical range query (/api/v1/query_range) gets exactly right against a raw-export ground truth -- a second, separate reliability finding beyond increase(); see README troubleshooting.",
       "timeFrom": "now/M",
       "interval": "1d",
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 27 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "unit": "short",
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "orientation": "auto",
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
-        "textMode": "value"
+        "textMode": "value_and_name"
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset $__range) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
           "legendFormat": "{{provider}}",
           "instant": false,
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "hideTimeOverride": true
     },
     {
       "id": 13,
@@ -470,27 +849,86 @@
       "title": "Model Breakdown (Top 12, 30d)",
       "description": "Top 12 (provider, model) pairs by 30-day token delta across cloud-side providers (hermes excluded -- controller ruling: a ranked table still invites cross-provider comparison/summing by eye, which recreates the double-count the anti-double-count rule prevents, even with each row individually labeled. hermes's per-model breakdown lives exclusively in the Hermes Per-Profile Attribution panel below). Same robust subtraction pattern as the other row-3 panels, issued as a range query reduced to its last value per series (see Month-to-Date's description for why instant mode is avoided).",
       "interval": "1d",
-      "gridPos": { "h": 8, "w": 18, "x": 6, "y": 27 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "gridPos": {
+        "h": 8,
+        "w": 18,
+        "x": 6,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "unit": "short",
-          "custom": { "align": "auto", "cellOptions": { "type": "auto" } },
-          "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] }
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last *"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Tokens (30d)"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Field"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Provider / Model"
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
       },
       "transformations": [
-        { "id": "reduce", "options": { "reducers": ["lastNotNull"], "includeTimeField": false } }
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ],
+            "includeTimeField": false
+          }
+        }
       ],
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "topk(12, sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0))))",
           "legendFormat": "{{provider}} / {{model}}",
           "instant": false,
@@ -504,80 +942,176 @@
       "type": "row",
       "title": "Totals & Health",
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
       "panels": []
     },
     {
       "id": 15,
-      "type": "piechart",
-      "title": "Local vs Cloud Share",
-      "description": "Yesterday-to-now token share: local (server-side sglang/llama.cpp -- whichever lane is currently resident, combined via a 3-way label-preserving zero-fallback union so that if more than one ever reports data in the same window none is silently dropped, rather than a bare 'or') vs cloud (all client-side providers except hermes -- the same total as Daily Tokens by Provider). llama.cpp is queried under its colon-namespaced metric names (llamacpp:*, per llama-server's --metrics documentation) as primary, with the underscore spelling (llamacpp_*) kept as a fallback until independently confirmed live against this project's own llama.cpp lane (owner-gated; see README) -- both legs read empty today, expected, this box currently runs sglang only. hermes is excluded from the cloud side here too, per the anti-double-count rule. All sides use the same robust max_over_time two-point subtraction as the rest of this row, not increase() -- verified live that increase() on the LOCAL side is ALSO unreliable across a lane-residency boundary (undercounted by ~27x when the resident lane started less than a day ago).",
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 36 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "type": "stat",
+      "title": "Local vs Cloud Output (24h)",
+      "description": "Comparable output-token totals for the last 24 hours: server-side local generation versus client-side cloud output, plus local output share. Hermes is excluded from cloud totals to prevent double-counting its mixed routing view. Uses two-point counter subtraction rather than increase().",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
-        "defaults": { "color": { "mode": "palette-classic" }, "unit": "short", "mappings": [] },
-        "overrides": []
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "short",
+          "noValue": "N/A",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "local output share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          }
+        ]
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
-        "pieType": "pie",
-        "displayLabels": ["percent"],
-        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "value_and_name"
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d])*0)))",
+          "legendFormat": "cloud output",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "(sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0)",
-          "legendFormat": "local",
+          "legendFormat": "local output",
           "instant": false,
           "range": true,
           "refId": "A"
         },
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
-          "legendFormat": "cloud",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "100 * ((sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0)) / (((sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0)) + (sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d])*0)))))",
+          "legendFormat": "local output share",
           "instant": false,
           "range": true,
-          "refId": "B"
+          "refId": "C"
         }
       ]
     },
     {
       "id": 16,
       "type": "timeseries",
-      "title": "Hermes Per-Profile Attribution (client-side view)",
-      "description": "Daily token deltas by Hermes model/profile, as reported by tokscale's client-side view of Hermes activity (mixes local-served and cloud-routed-through-Hermes traffic). Deliberately never summed into any cross-provider total on this dashboard -- see the anti-double-count rule. Same robust subtraction pattern as the other day-granular panels, not increase().",
+      "title": "Hermes Client View (30d)",
+      "description": "Client-side view. Daily token deltas by Hermes model/profile, as reported by tokscale's client-side view of Hermes activity (mixes local-served and cloud-routed-through-Hermes traffic). Deliberately never summed into any cross-provider total on this dashboard -- see the anti-double-count rule. Same robust subtraction pattern as the other day-granular panels, not increase(). Rendered as stacked daily bars: the data is sparse day-granular deltas, which as overlapping lines read as a tangle of spikes over empty space.",
       "timeFrom": "30d",
       "interval": "1d",
-      "gridPos": { "h": 8, "w": 10, "x": 6, "y": 36 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "unit": "short",
           "mappings": [],
           "custom": {
-            "drawStyle": "line",
+            "drawStyle": "bars",
             "lineWidth": 1,
-            "fillOpacity": 10,
+            "fillOpacity": 100,
             "pointSize": 5,
             "showPoints": "never",
             "spanNulls": false,
             "axisPlacement": "auto",
-            "scaleDistribution": { "type": "linear" },
-            "stacking": { "mode": "none", "group": "A" }
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
           }
         },
         "overrides": []
       },
       "options": {
-        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
           "expr": "sum by (model)(max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d]) - (max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d])*0)))",
           "legendFormat": "{{model}}",
           "instant": false,
@@ -589,26 +1123,62 @@
     {
       "id": 17,
       "type": "stat",
-      "title": "Collector Lane Up",
-      "description": "aiobs_lane_up per collector lane -- 1=succeeded this cycle, 0=failed or never run. Wrapped in last_over_time(...[20m]), not the bare metric name: a bare instant selector uses Prometheus/VM's default ~5-minute staleness lookback, which is shorter than this collector's 600s launchd cadence and was verified live to occasionally go blank (both a genuine risk on any real gap, and reproduced once during dashboard verification, apparently as a query-cache artifact) -- 20m is a comfortable multiple of the cadence. openrouter is EXPECTED to show 0 / DOWN until the owner provisions an OpenRouter Management API Key (see AIOBS_OPENROUTER_ENV_FILE / AIOBS_OPENROUTER_KEY_NAME in the README config table) -- the lane is deliberately fail-closed, not broken. A red openrouter tile here is normal, not an incident.",
-      "gridPos": { "h": 8, "w": 4, "x": 16, "y": 36 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "title": "Collector Lanes",
+      "description": "Latest status per known collector lane. UP means a successful sample in the last 20 minutes. NOT UP means the latest cycle failed, the lane is unconfigured, or no recent sample exists; a 30-day fallback keeps stale lane labels visible.",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 16,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "unit": "none",
+          "noValue": "NO LANE DATA",
           "mappings": [
-            { "type": "value", "options": { "0": { "text": "DOWN / not configured" }, "1": { "text": "UP" } } }
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "NOT UP"
+                },
+                "1": {
+                  "text": "UP"
+                }
+              }
+            }
           ],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 1 }]
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "orientation": "horizontal",
         "colorMode": "background",
         "graphMode": "none",
@@ -617,8 +1187,11 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "last_over_time(aiobs_lane_up[20m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "last_over_time(aiobs_lane_up[20m]) or (last_over_time(aiobs_lane_up[30d]) * 0)",
           "legendFormat": "{{lane}}",
           "instant": true,
           "range": false,
@@ -629,28 +1202,64 @@
     {
       "id": 18,
       "type": "stat",
-      "title": "Collector Lane Freshness",
-      "description": "Seconds since each lane's last successful run (time() minus last_over_time(aiobs_lane_last_success_timestamp[20m]) -- the last_over_time wrapper avoids the same default-staleness-lookback gap as the Lane Up panel, see its description). openrouter shows 'never (unkeyed)' -- it has no last_success sample at all until it first succeeds (fail-closed design, not a bug; confirmed live -- the series is genuinely absent, not zero). tokscale should stay well under the 600s launchd cadence plus a small margin.",
-      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 36 },
-      "datasource": { "type": "prometheus", "uid": "vm" },
+      "title": "Collector Freshness",
+      "description": "Elapsed time since each lane last succeeded. Green is under 15 minutes, yellow is 15-60 minutes, and red is over one hour. A 30-day lookback keeps stopped collectors visible; known lanes that have never succeeded are shown explicitly as NEVER.",
+      "gridPos": {
+        "h": 8,
+        "w": 4,
+        "x": 20,
+        "y": 36
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "unit": "dtdurations",
-          "noValue": "never (unkeyed)",
+          "noValue": "NO LANE DATA",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "color": "red",
+                  "text": "NEVER"
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 900 },
-              { "color": "red", "value": 3600 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 900
+              },
+              {
+                "color": "red",
+                "value": 3600
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "orientation": "horizontal",
         "colorMode": "background",
         "graphMode": "none",
@@ -659,8 +1268,11 @@
       },
       "targets": [
         {
-          "datasource": { "type": "prometheus", "uid": "vm" },
-          "expr": "time() - last_over_time(aiobs_lane_last_success_timestamp[20m])",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(time() - last_over_time(aiobs_lane_last_success_timestamp[30d])) or (last_over_time(aiobs_lane_up[30d]) * 0 - 1)",
           "legendFormat": "{{lane}}",
           "instant": true,
           "range": false,

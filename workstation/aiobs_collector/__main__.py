@@ -5,6 +5,11 @@ them through the frozen `run_lanes` harness (Task 8), filters what to push
 (or takes everything, under `--backfill`), then either prints the exposition
 (`--dry-run`) or POSTs it to VictoriaMetrics via `push.push_samples` (Task 11).
 
+Between the lanes and the push filter, `monotonic.apply_monotonic` shapes the
+two cumulative metrics so a series can never go down across runs even when
+its source history shrinks (deleted transcripts); `--seed-offsets-from-vm`
+is the one-off repair for series that had already shrunk (see monotonic.py).
+
 State (`AIOBS_STATE_DIR`) is only written after a successful push: a failed
 push leaves state untouched, so the next cycle simply retries with the same
 baseline. Re-pushing is always safe -- VictoriaMetrics's import endpoint is
@@ -34,6 +39,7 @@ from aiobs_collector.core import (
 )
 from aiobs_collector.lane_openrouter import OpenRouterLane
 from aiobs_collector.lane_tokscale import TokscaleLane
+from aiobs_collector.monotonic import apply_monotonic, fetch_peaks, seed_offsets_from_peaks
 from aiobs_collector.push import push_samples
 
 # name (as it appears in AIOBS_LANES) -> zero-arg-constructible Lane class.
@@ -267,6 +273,51 @@ def compute_openrouter_state(samples: list, prior_state: dict, now_ms: int) -> d
     return new_state
 
 
+def _vm_base_url(cfg: dict) -> str:
+    hub_ip = cfg.get("AIOBS_HUB_TAILNET_IP") or ""
+    vm_port = cfg.get("AIOBS_VM_PORT") or ""
+    if not hub_ip or not vm_port:
+        raise ConfigError("AIOBS_HUB_TAILNET_IP and AIOBS_VM_PORT must both be set in config")
+    return f"http://{hub_ip}:{vm_port}"
+
+
+def _seed_offsets(args, cfg: dict, state_dir: str, raw_samples: list, new_state: dict) -> int:
+    """`--seed-offsets-from-vm`: one-off repair for series that shrank before
+    the monotonic shaping existed (see monotonic.py). Reads the peak each
+    cumulative series ever reached in VictoriaMetrics and raises that series'
+    offset so the next normal run resumes from the peak. Pushes nothing and
+    never advances the push high-water marks; `--dry-run` only reports.
+    """
+    try:
+        vm_base_url = _vm_base_url(cfg)
+    except ConfigError as exc:
+        print(f"aiobs_collector: {exc}", file=sys.stderr)
+        return 2
+    try:
+        peaks = fetch_peaks(vm_base_url)
+    except Exception as exc:
+        print(f"aiobs_collector: seed failed: {exc}", file=sys.stderr)
+        return 1
+
+    seeded_state, seeded = seed_offsets_from_peaks(raw_samples, new_state, peaks)
+    tokens = sum(v for k, v in seeded.items() if k.startswith("aiobs_tokens_total{"))
+    cost = sum(v for k, v in seeded.items() if k.startswith("aiobs_cost_usd_total{"))
+    print(
+        f"aiobs_collector: seeded offsets for {len(seeded)} series from {len(peaks)} VM peaks "
+        f"(banked {tokens:,.0f} tokens and ${cost:,.2f})"
+    )
+    for key, offset in sorted(seeded.items(), key=lambda item: -item[1]):
+        print(f"  {key} +{offset:,.2f}")
+    if args.dry_run:
+        return 0
+    try:
+        save_state(state_dir, seeded_state)
+    except Exception as exc:
+        print(f"aiobs_collector: failed to save state: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
 def _parse_args(argv):
     parser = argparse.ArgumentParser(
         prog="aiobs_collector", description="Push AI-estate token/cost samples to VictoriaMetrics."
@@ -277,6 +328,12 @@ def _parse_args(argv):
     )
     parser.add_argument(
         "--dry-run", action="store_true", help="print the exposition instead of pushing; no state write"
+    )
+    parser.add_argument(
+        "--seed-offsets-from-vm",
+        action="store_true",
+        help="one-off: bank each cumulative series' stored VictoriaMetrics peak into its monotonic "
+        "offset (no push); combine with --dry-run to only report",
     )
     return parser.parse_args(argv)
 
@@ -303,7 +360,16 @@ def main(argv=None) -> int:
 
     state = load_state(state_dir)
     now_ms = int(time.time() * 1000)
-    samples, new_state = run_lanes(lanes, cfg, state, now_ms)
+    raw_samples, new_state = run_lanes(lanes, cfg, state, now_ms)
+    if args.seed_offsets_from_vm:
+        return _seed_offsets(args, cfg, state_dir, raw_samples, new_state)
+
+    # Shape the cumulative counters so they never go down across runs
+    # (monotonic.py). Everything pushed is shaped; everything PERSISTED about
+    # the lanes' own baselines (compute_openrouter_state) must keep reading
+    # the raw values, or the offset would be folded into next run's raw and
+    # applied twice.
+    samples, new_state = apply_monotonic(raw_samples, new_state)
     to_push = filter_for_push(samples, state, now_ms, backfill=args.backfill)
 
     if args.dry_run:
@@ -312,15 +378,11 @@ def main(argv=None) -> int:
             print(exposition)
         return 0
 
-    hub_ip = cfg.get("AIOBS_HUB_TAILNET_IP") or ""
-    vm_port = cfg.get("AIOBS_VM_PORT") or ""
-    if not hub_ip or not vm_port:
-        print(
-            "aiobs_collector: AIOBS_HUB_TAILNET_IP and AIOBS_VM_PORT must both be set in config",
-            file=sys.stderr,
-        )
+    try:
+        vm_base_url = _vm_base_url(cfg)
+    except ConfigError as exc:
+        print(f"aiobs_collector: {exc}", file=sys.stderr)
         return 2
-    vm_base_url = f"http://{hub_ip}:{vm_port}"
 
     try:
         push_samples(vm_base_url, to_push)
@@ -331,8 +393,8 @@ def main(argv=None) -> int:
     lane_names = ", ".join(sorted(lane.name for lane in lanes)) or "none"
     print(f"aiobs_collector: pushed {len(to_push)} samples to {vm_base_url} (lanes: {lane_names})")
 
-    final_state = compute_push_state(samples, new_state, now_ms)
-    final_state = compute_openrouter_state(samples, final_state, now_ms)
+    final_state = compute_push_state(raw_samples, new_state, now_ms)
+    final_state = compute_openrouter_state(raw_samples, final_state, now_ms)
     try:
         save_state(state_dir, final_state)
     except Exception as exc:

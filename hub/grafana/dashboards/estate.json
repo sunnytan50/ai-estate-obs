@@ -2,7 +2,7 @@
   "id": null,
   "uid": "aiobs-estate",
   "title": "AI Estate",
-  "description": "Flagship estate overview: GPU power/thermal, local inference throughput, cloud token/cost flow by provider, and collector lane health.",
+  "description": "Flagship estate overview: GPU power/thermal, local inference throughput, cloud token/cost flow by provider, and collector lane health. Provider / Model / Token kind dropdowns drive the Cloud Tokens row.",
   "tags": [
     "aiobs"
   ],
@@ -11,7 +11,7 @@
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 4,
+  "version": 7,
   "refresh": "30s",
   "time": {
     "from": "now-24h",
@@ -44,7 +44,116 @@
     }
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "type": "query",
+        "name": "provider",
+        "label": "Provider",
+        "description": "Cloud-side providers with any usage in the last 30 days (hermes excluded -- it has its own attribution panel).",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "vm"
+        },
+        "definition": "query_result(sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[30d])))",
+        "query": "query_result(sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[30d])))",
+        "regex": "/provider=\"([^\"]+)\"/",
+        "refresh": 1,
+        "sort": 1,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "type": "query",
+        "name": "model",
+        "label": "Model",
+        "description": "Models with any usage in the last 30 days under the selected provider(s).",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "vm"
+        },
+        "definition": "query_result(sum by (model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\"}[30d])))",
+        "query": "query_result(sum by (model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\"}[30d])))",
+        "regex": "/model=\"([^\"]+)\"/",
+        "refresh": 1,
+        "sort": 1,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "type": "custom",
+        "name": "kind",
+        "label": "Token kind",
+        "description": "Which token kinds the Cloud Tokens panels count. All = every kind summed (cache reads usually dominate); pick output to see generated tokens only. Cost panels ignore this -- cost series carry no kind label.",
+        "query": "input,output,cache_read,cache_write",
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "input",
+            "value": "input"
+          },
+          {
+            "selected": false,
+            "text": "output",
+            "value": "output"
+          },
+          {
+            "selected": false,
+            "text": "cache_read",
+            "value": "cache_read"
+          },
+          {
+            "selected": false,
+            "text": "cache_write",
+            "value": "cache_write"
+          }
+        ],
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
   },
   "annotations": {
     "list": [
@@ -645,7 +754,7 @@
       "id": 10,
       "type": "timeseries",
       "title": "Daily Tokens by Provider (30d)",
-      "description": "Stacked daily token deltas per cloud-side provider (hermes excluded -- its client-side view mixes local + cloud-routed traffic and lives in its own attribution panel below, per the spec's anti-double-count rule). Query is a direct two-point counter subtraction -- max_over_time(...) minus its 1d-offset twin, each falling back to a zero-valued series that carries the SAME labels (X or (X*0), not X or vector(0), which has no labels and silently drops any series with no exact match) -- NOT increase(). increase() was verified live against this day-granular pushed data to be unreliable (window-size-dependent, off by up to ~27x); see README troubleshooting.",
+      "description": "Stacked daily token deltas per cloud-side provider (hermes excluded -- its client-side view mixes local + cloud-routed traffic and lives in its own attribution panel below, per the spec's anti-double-count rule). Query is a direct two-point counter subtraction -- max_over_time(...) minus its 1d-offset twin, each falling back to a zero-valued series that carries the SAME labels (X or (X*0), not X or vector(0), which has no labels and silently drops any series with no exact match) -- NOT increase(). increase() was verified live against this day-granular pushed data to be unreliable (window-size-dependent, off by up to ~27x); see README troubleshooting. Filtered by the Provider / Model / Token kind dropdowns (All = the previous unfiltered behaviour).",
       "timeFrom": "30d",
       "interval": "1d",
       "gridPos": {
@@ -702,7 +811,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
+          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0)))",
           "legendFormat": "{{provider}}",
           "instant": false,
           "range": true,
@@ -714,7 +823,7 @@
       "id": 11,
       "type": "timeseries",
       "title": "Cost per Day (30d)",
-      "description": "Daily client-side cost delta per cloud provider. Hermes is excluded to avoid double-counting its mixed local and cloud-routed client view. Uses the same two-point subtraction as the token panels, not increase().",
+      "description": "Daily client-side cost delta per cloud provider. Hermes is excluded to avoid double-counting its mixed local and cloud-routed client view. Uses the same two-point subtraction as the token panels, not increase(). Filtered by the Provider / Model dropdowns (cost series carry no kind label, so Token kind does not apply).",
       "timeFrom": "30d",
       "interval": "1d",
       "gridPos": {
@@ -771,8 +880,146 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 1d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
+          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 1d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))",
           "legendFormat": "{{provider}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Daily Tokens by Model (30d)",
+      "description": "Stacked daily token deltas per (provider, model) across cloud-side providers (hermes excluded, same anti-double-count rule as the provider panel). Same two-point max_over_time subtraction as every other counter panel here -- never increase(). Filtered by the Provider / Model / Token kind dropdowns (All = the previous unfiltered behaviour). Limited to the 12 largest series via MetricsQL topk_max(), which picks ONE series set for the whole range -- Prometheus topk() re-ranks at every step, which makes stacked daily bars flicker and mis-stack. Pick a single model in the dropdown to isolate it (e.g. gpt-6-astra).",
+      "timeFrom": "30d",
+      "interval": "1d",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "mappings": [],
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 100,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "topk_max(12, sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0))))",
+          "legendFormat": "{{provider}} / {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Cost per Day by Model (30d)",
+      "description": "Stacked daily USD cost deltas per (provider, model) across cloud-side providers (hermes excluded). Cost is whatever each source reports (tokscale's list-price estimate for the coding agents, OpenRouter's billed usage for the openrouter lane). Filtered by the Provider / Model dropdowns (cost series carry no kind label, so Token kind does not apply). Limited to the 12 largest series via MetricsQL topk_max(), which picks ONE series set for the whole range -- Prometheus topk() re-ranks at every step, which makes stacked daily bars flicker and mis-stack. Pick a single model in the dropdown to isolate it (e.g. gpt-6-astra).",
+      "timeFrom": "30d",
+      "interval": "1d",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 27
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "currencyUSD",
+          "mappings": [],
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 100,
+            "pointSize": 5,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisPlacement": "auto",
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "topk_max(12, sum by (provider,model)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 1d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0))))",
+          "legendFormat": "{{provider}} / {{model}}",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -783,14 +1030,14 @@
       "id": 12,
       "type": "stat",
       "title": "Month-to-Date",
-      "description": "Cumulative tokens since the start of the current calendar month, per cloud-side provider (hermes excluded). Panel time range is pinned to now/M via timeFrom, independent of the dashboard's own 24h default. Deliberately issued as a range query reduced to its last point, not an instant query: verified live that VictoriaMetrics' instant-query path (/api/v1/query) can return a materially wrong result for this same max_over_time+large-offset expression at the exact same evaluation instant an identical range query (/api/v1/query_range) gets exactly right against a raw-export ground truth -- a second, separate reliability finding beyond increase(); see README troubleshooting.",
+      "description": "Cumulative tokens since the start of the current calendar month, per cloud-side provider (hermes excluded). Panel time range is pinned to now/M via timeFrom, independent of the dashboard's own 24h default. Deliberately issued as a range query reduced to its last point, not an instant query: verified live that VictoriaMetrics' instant-query path (/api/v1/query) can return a materially wrong result for this same max_over_time+large-offset expression at the exact same evaluation instant an identical range query (/api/v1/query_range) gets exactly right against a raw-export ground truth -- a second, separate reliability finding beyond increase(); see README troubleshooting. Filtered by the Provider / Model / Token kind dropdowns (All = the previous unfiltered behaviour). Month boundary is exact: the offset side is evaluated with the @ modifier at ${__from:date:seconds} (the panel's now/M range start = local month start), not `offset $__range` -- on a step grid the offset form landed the boundary inside the previous month's last day (verified live: it counted Aug 31) and the day-aligned grid excluded today. Hourly steps keep the last point, and the sparkline, current.",
       "timeFrom": "now/M",
-      "interval": "1d",
+      "interval": "1h",
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 6,
         "x": 0,
-        "y": 27
+        "y": 35
       },
       "datasource": {
         "type": "prometheus",
@@ -834,7 +1081,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset $__range) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0)))",
+          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0)))",
           "legendFormat": "{{provider}}",
           "instant": false,
           "range": true,
@@ -846,14 +1093,14 @@
     {
       "id": 13,
       "type": "table",
-      "title": "Model Breakdown (Top 12, 30d)",
-      "description": "Top 12 (provider, model) pairs by 30-day token delta across cloud-side providers (hermes excluded -- controller ruling: a ranked table still invites cross-provider comparison/summing by eye, which recreates the double-count the anti-double-count rule prevents, even with each row individually labeled. hermes's per-model breakdown lives exclusively in the Hermes Per-Profile Attribution panel below). Same robust subtraction pattern as the other row-3 panels, issued as a range query reduced to its last value per series (see Month-to-Date's description for why instant mode is avoided).",
-      "interval": "1d",
+      "title": "Model Breakdown (30d)",
+      "description": "Every (provider, model) pair with usage in the last 30 days across cloud-side providers (hermes excluded -- controller ruling: a ranked table invites cross-provider summing by eye, which recreates the double-count the anti-double-count rule prevents; hermes's per-model breakdown lives in its own panel below). Three range queries (tokens of the selected kinds, output tokens, cost), each the same two-point max_over_time subtraction as the other counter panels, issued in table format and merged: merge -> sort by time -> group by provider+model taking each value's last point -> rename -> drop zero rows -> sort by tokens -> top 20. Range queries reduced to their last point rather than instant queries, for the reason given on the Month-to-Date tile. Column headers are filterable (type a model name). Filtered by the Provider / Model / Token kind dropdowns (All = the previous unfiltered behaviour). Evaluated on a 1-minute grid over a hidden 1-hour panel range so the last point (the value shown) is within a minute of now -- on the dashboard's day-aligned grid the table stopped at the last local midnight and today's usage never appeared until tomorrow. The 30-day window comes from the query's own offset, not the panel range.",
+      "interval": "1m",
       "gridPos": {
-        "h": 8,
-        "w": 18,
+        "h": 9,
+        "w": 12,
         "x": 6,
-        "y": 27
+        "y": 35
       },
       "datasource": {
         "type": "prometheus",
@@ -869,7 +1116,8 @@
             "align": "auto",
             "cellOptions": {
               "type": "auto"
-            }
+            },
+            "filterable": true
           },
           "thresholds": {
             "mode": "absolute",
@@ -885,24 +1133,68 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Last *"
+              "options": "Provider"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "Tokens (30d)"
+                "id": "custom.width",
+                "value": 110
               }
             ]
           },
           {
             "matcher": {
               "id": "byName",
-              "options": "Field"
+              "options": "Tokens (30d)"
             },
             "properties": [
               {
-                "id": "displayName",
-                "value": "Provider / Model"
+                "id": "custom.width",
+                "value": 125
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Output (30d)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 115
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Cost (30d)"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 110
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
               }
             ]
           }
@@ -914,12 +1206,106 @@
       },
       "transformations": [
         {
-          "id": "reduce",
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "sortBy",
           "options": {
-            "reducers": [
-              "lastNotNull"
+            "sort": [
+              {
+                "field": "Time",
+                "desc": false
+              }
+            ]
+          }
+        },
+        {
+          "id": "groupBy",
+          "options": {
+            "fields": {
+              "provider": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "model": {
+                "aggregations": [],
+                "operation": "groupby"
+              },
+              "Value #A": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #B": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #C": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              }
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {},
+            "indexByName": {
+              "provider": 0,
+              "model": 1,
+              "Value #A (lastNotNull)": 2,
+              "Value #B (lastNotNull)": 3,
+              "Value #C (lastNotNull)": 4
+            },
+            "renameByName": {
+              "provider": "Provider",
+              "model": "Model",
+              "Value #A (lastNotNull)": "Tokens (30d)",
+              "Value #B (lastNotNull)": "Output (30d)",
+              "Value #C (lastNotNull)": "Cost (30d)"
+            }
+          }
+        },
+        {
+          "id": "filterByValue",
+          "options": {
+            "filters": [
+              {
+                "fieldName": "Tokens (30d)",
+                "config": {
+                  "id": "greater",
+                  "options": {
+                    "value": 0
+                  }
+                }
+              }
             ],
-            "includeTimeField": false
+            "type": "include",
+            "match": "all"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Tokens (30d)",
+                "desc": true
+              }
+            ]
+          }
+        },
+        {
+          "id": "limit",
+          "options": {
+            "limitField": 20
           }
         }
       ],
@@ -929,13 +1315,105 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "topk(12, sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\"}[400d])*0))))",
-          "legendFormat": "{{provider}} / {{model}}",
+          "expr": "sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0)))",
+          "format": "table",
+          "instant": false,
+          "range": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"output\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"output\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"output\"}[400d])*0)))",
+          "format": "table",
+          "instant": false,
+          "range": true,
+          "legendFormat": "__auto",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum by (provider,model)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 30d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))",
+          "format": "table",
+          "instant": false,
+          "range": true,
+          "legendFormat": "__auto",
+          "refId": "C"
+        }
+      ],
+      "timeFrom": "1h",
+      "hideTimeOverride": true
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Cost Month-to-Date",
+      "description": "Cumulative USD cost since the start of the current calendar month, per cloud-side provider (hermes excluded). Same now/M time override and range-query-reduced-to-last-point pattern as the token Month-to-Date tile. Filtered by the Provider / Model dropdowns (cost series carry no kind label, so Token kind does not apply). Month boundary is exact: the offset side is evaluated with the @ modifier at ${__from:date:seconds} (the panel's now/M range start = local month start), not `offset $__range` -- on a step grid the offset form landed the boundary inside the previous month's last day (verified live: it counted Aug 31) and the day-aligned grid excluded today. Hourly steps keep the last point, and the sparkline, current.",
+      "timeFrom": "now/M",
+      "interval": "1h",
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 35
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "currencyUSD",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))",
+          "legendFormat": "{{provider}}",
           "instant": false,
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "hideTimeOverride": true
     },
     {
       "id": 14,
@@ -946,7 +1424,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 44
       },
       "panels": []
     },
@@ -959,7 +1437,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 36
+        "y": 45
       },
       "datasource": {
         "type": "prometheus",
@@ -1062,7 +1540,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 36
+        "y": 45
       },
       "datasource": {
         "type": "prometheus",
@@ -1129,7 +1607,7 @@
         "h": 8,
         "w": 4,
         "x": 16,
-        "y": 36
+        "y": 45
       },
       "datasource": {
         "type": "prometheus",
@@ -1208,7 +1686,7 @@
         "h": 8,
         "w": 4,
         "x": 20,
-        "y": 36
+        "y": 45
       },
       "datasource": {
         "type": "prometheus",

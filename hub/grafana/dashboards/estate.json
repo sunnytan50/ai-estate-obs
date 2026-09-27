@@ -332,7 +332,7 @@
       "id": 103,
       "type": "stat",
       "title": "",
-      "description": "Linear run-rate: spend this month x (days in month / days elapsed); the sparkline is how the projection moved through the month. A projection, not a forecast -- one heavy day moves it. days_in_month() is evaluated on a timestamp three days into the local month so the UTC-based function names the right month.",
+      "description": "Where this month's spend is heading. From day 7 on: linear run-rate, spend so far x (days in month / days elapsed). In the first 7 days: spend so far + remaining days x the average daily spend of the last 7 days -- a straight line through a few hours of spend is noise (backtest: on 1 Aug the linear projection read $0 against a $9,000 month; this reads $6,340, and it converges on the actual total at month end). Bursty weeks still move it; it is a projection, not a budget. Sparkline: the forecast as it evolved through the month (each step divides by that step's own elapsed time). days_in_month() is evaluated on a timestamp three days into the local month so the UTC-based function names the right month.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -390,8 +390,8 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval)*0))) * (days_in_month(vector(${__from:date:seconds} + 259200)) * 86400) / (now() - ${__from:date:seconds})",
-          "legendFormat": "Month-end run-rate",
+          "expr": "((sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval)*0)))) * (days_in_month(vector(${__from:date:seconds} + 259200)) * 86400) / (time() + $__interval_ms / 1000 - ${__from:date:seconds}) and on() (vector(time() + $__interval_ms / 1000 - ${__from:date:seconds}) >= 604800)) or ((sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval)*0)))) + clamp_min((days_in_month(vector(${__from:date:seconds} + 259200)) * 86400) - (time() + $__interval_ms / 1000 - ${__from:date:seconds}), 0) / 86400 * (sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 7d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval)*0)))) / 7 and on() (vector(time() + $__interval_ms / 1000 - ${__from:date:seconds}) < 604800))",
+          "legendFormat": "Month-end forecast",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -553,7 +553,7 @@
       "id": 106,
       "type": "stat",
       "title": "",
-      "description": "nvidia-smi board power on the GPU box: 5-minute averages over the last 6 hours; the value is the latest 5-minute average.",
+      "description": "nvidia-smi board power on the GPU box: 5-minute averages over the last 6 hours; the value is the latest 5-minute average, or 'offline' when the box has stopped reporting (vmagent runs on the box, so an outage leaves no samples at all).",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -571,7 +571,18 @@
             "fixedColor": "#199e70"
           },
           "unit": "watt",
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "offline",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -581,8 +592,7 @@
               }
             ]
           },
-          "decimals": 0,
-          "noValue": "offline"
+          "decimals": 0
         },
         "overrides": []
       },
@@ -612,7 +622,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(avg_over_time(nvidia_smi_power_draw_watts[$__interval]))",
+          "expr": "max(avg_over_time(nvidia_smi_power_draw_watts[$__interval])) or on() vector(-1)",
           "legendFormat": "GPU power",
           "instant": false,
           "range": true,
@@ -2521,8 +2531,8 @@
           },
           "expr": "sum(last_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs|llamacpp:requests_processing\"}[1m]) keep_metric_names)",
           "legendFormat": "Running",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "A"
         },
         {
@@ -2532,8 +2542,8 @@
           },
           "expr": "sum(last_over_time({__name__=~\"vllm:num_requests_waiting|sglang:num_queue_reqs|llamacpp:requests_deferred\"}[1m]) keep_metric_names)",
           "legendFormat": "Queued",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "B"
         },
         {
@@ -2543,8 +2553,8 @@
           },
           "expr": "max(last_over_time({__name__=~\"vllm:kv_cache_usage_perc|sglang:token_usage\"}[1m]) keep_metric_names)",
           "legendFormat": "KV cache",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "C"
         },
         {
@@ -2554,8 +2564,8 @@
           },
           "expr": "sum(increase({__name__=~\"vllm:prefix_cache_hits_total|sglang:cached_tokens_total|llamacpp:prompt_tokens_cached_total\"}[$__range]) keep_metric_names) / sum(increase({__name__=~\"vllm:prefix_cache_queries_total|sglang:prompt_tokens_total|llamacpp:prompt_tokens_total\"}[$__range]) keep_metric_names)",
           "legendFormat": "Prefix cache hits",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "D"
         },
         {
@@ -2565,8 +2575,8 @@
           },
           "expr": "sum(increase({__name__=~\"vllm:e2e_request_latency_seconds_count|sglang:e2e_request_latency_seconds_count\"}[$__range]) keep_metric_names)",
           "legendFormat": "Requests",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "E"
         }
       ]
@@ -2980,7 +2990,7 @@
       "id": 4,
       "type": "stat",
       "title": "GPU Vitals",
-      "description": "Energy since local midnight plus the latest die temperature, fan duty, graphics clock and VRAM in use on the GPU box (panel pinned to now/d). Energy is MetricsQL integrate() over the actual power samples, in kWh -- deliberately NOT avg_over_time(...) * $__range_s, which extrapolates the sampled average across unsampled hours and over-reported ~3.4x on a partial-coverage day (drifting DOWNWARD as idle samples accumulated); caught 2026-08-29 against a raw /api/v1/export trapezoid ground truth (integrate() matched within 0.25%). integrate() wraps the raw selector: integrate(max(m)[..]) is an implicit subquery that resamples and read 0.85% high (2026-09-27). Range queries reduced to their last value.",
+      "description": "Energy since local midnight plus the latest die temperature, fan duty, graphics clock and VRAM in use on the GPU box (panel pinned to now/d). Energy is MetricsQL integrate() over the actual power samples, in kWh -- deliberately NOT avg_over_time(...) * $__range_s, which extrapolates the sampled average across unsampled hours and over-reported ~3.4x on a partial-coverage day (drifting DOWNWARD as idle samples accumulated); caught 2026-08-29 against a raw /api/v1/export trapezoid ground truth (integrate() matched within 0.25%). integrate() wraps the raw selector: integrate(max(m)[..]) is an implicit subquery that resamples and read 0.85% high (2026-09-27); and it sums 5-minute windows, because a whole-range integrate() range query carries the last reading through an outage (read 27% high for 10 Sep). Range queries reduced to their last value.",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -3118,7 +3128,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum(integrate(nvidia_smi_power_draw_watts[$__range])) / 3.6e6",
+          "expr": "sum(sum_over_time(integrate(nvidia_smi_power_draw_watts[5m])[$__range:5m])) / 3.6e6",
           "legendFormat": "Energy today",
           "instant": false,
           "range": true,
@@ -3635,7 +3645,7 @@
                 },
                 "1": {
                   "text": "up",
-                  "color": "#0ca30c",
+                  "color": "rgba(12, 163, 12, 0.38)",
                   "index": 1
                 }
               }
@@ -3652,7 +3662,7 @@
           },
           "custom": {
             "lineWidth": 0,
-            "fillOpacity": 55,
+            "fillOpacity": 80,
             "insertNulls": false,
             "spanNulls": false,
             "hideFrom": {

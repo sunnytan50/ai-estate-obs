@@ -11,7 +11,7 @@
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 2,
+  "version": 3,
   "refresh": "30s",
   "time": {
     "from": "now-24h",
@@ -121,7 +121,7 @@
       "id": 101,
       "type": "stat",
       "title": "",
-      "description": "Board power draw (nvidia-smi power.draw), averaged per sparkline step; the value is the latest step's average.",
+      "description": "Board power draw, 1-minute averages over the last 3 hours; the value is the latest minute.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -139,7 +139,18 @@
             "fixedColor": "#199e70"
           },
           "unit": "watt",
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "offline",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -149,7 +160,8 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 0,
+          "min": 0
         },
         "overrides": []
       },
@@ -179,20 +191,23 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(avg_over_time(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))",
+          "expr": "(max(avg_over_time(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
           "legendFormat": "Power",
           "instant": false,
           "range": true,
           "refId": "A"
         }
       ],
-      "maxDataPoints": 120
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
     },
     {
       "id": 102,
       "type": "stat",
       "title": "",
-      "description": "Share of time the SMs ran a kernel (utilization.gpu).",
+      "description": "Share of time at least one kernel was running (nvidia-smi utilization.gpu) -- busy time, not how much of the chip the kernels used. 1-minute averages over the last 3 hours.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -210,7 +225,18 @@
             "fixedColor": "#3987e5"
           },
           "unit": "percentunit",
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "offline",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -220,7 +246,9 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 0,
+          "min": 0,
+          "max": 1
         },
         "overrides": []
       },
@@ -250,14 +278,17 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(avg_over_time(nvidia_smi_utilization_gpu_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))",
-          "legendFormat": "Utilization",
+          "expr": "(max(avg_over_time(nvidia_smi_utilization_gpu_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
+          "legendFormat": "GPU busy",
           "instant": false,
           "range": true,
           "refId": "A"
         }
       ],
-      "maxDataPoints": 120
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
     },
     {
       "id": 103,
@@ -281,7 +312,18 @@
             "fixedColor": "#d55181"
           },
           "unit": "bytes",
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "offline",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -291,7 +333,8 @@
               }
             ]
           },
-          "decimals": 1
+          "decimals": 1,
+          "min": 0
         },
         "overrides": []
       },
@@ -321,19 +364,23 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})",
+          "expr": "(max(avg_over_time(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
           "legendFormat": "VRAM in use",
           "instant": false,
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
     },
     {
       "id": 104,
       "type": "stat",
       "title": "",
-      "description": "GPU die temperature.",
+      "description": "GPU die temperature, hottest sample per minute over the last 3 hours (fixed 0-100 C scale).",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -351,7 +398,18 @@
             "fixedColor": "#d95926"
           },
           "unit": "celsius",
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "offline",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -361,7 +419,9 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 0,
+          "min": 0,
+          "max": 100
         },
         "overrides": []
       },
@@ -391,19 +451,23 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(nvidia_smi_temperature_gpu{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})",
+          "expr": "(max(max_over_time(nvidia_smi_temperature_gpu{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
           "legendFormat": "Temperature",
           "instant": false,
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
     },
     {
       "id": 105,
       "type": "stat",
       "title": "",
-      "description": "Degrees Celsius left before the driver's thermal slowdown point (temperature.gpu.tlimit). Amber under 10, red under 5.",
+      "description": "Degrees Celsius left before the driver's thermal slowdown point (temperature.gpu.tlimit), tightest sample per minute. Amber under 10, red under 5.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -420,7 +484,18 @@
             "mode": "thresholds"
           },
           "unit": "celsius",
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "offline",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -470,19 +545,23 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "min(nvidia_smi_temperature_gpu_tlimit{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})",
-          "legendFormat": "Thermal headroom",
+          "expr": "(min(min_over_time(nvidia_smi_temperature_gpu_tlimit{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
+          "legendFormat": "Headroom",
           "instant": false,
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
     },
     {
       "id": 106,
       "type": "stat",
       "title": "",
-      "description": "Current graphics (shader) clock; SM clock tracks it exactly on this card.",
+      "description": "Graphics (shader) clock, 1-minute averages; the SM clock tracks it exactly on this card.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -500,7 +579,18 @@
             "fixedColor": "#9085e9"
           },
           "unit": "hertz",
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "offline",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -510,7 +600,8 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 0,
+          "min": 0
         },
         "overrides": []
       },
@@ -540,20 +631,23 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(avg_over_time(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))",
+          "expr": "(max(avg_over_time(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
           "legendFormat": "Graphics clock",
           "instant": false,
           "range": true,
           "refId": "A"
         }
       ],
-      "maxDataPoints": 120
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
     },
     {
       "id": 107,
       "type": "stat",
       "title": "",
-      "description": "Energy since local midnight: a running sum of per-step integrate() over the raw power samples (each window looks one step ahead so the day starts exactly at midnight and the last step reaches now). integrate() must wrap the raw selector -- integrate(max(m)[..]) is an implicit subquery that resamples and read 0.85% high.",
+      "description": "Energy since local midnight: a running sum of 5-minute integrate() windows over the raw power samples, each looking one step ahead so the day starts at midnight and the last step reaches now. Short windows matter: a whole-day integrate() range query carries the last reading through an outage (read 27% high for 10 Sep). integrate() wraps the raw selector -- integrate(max(m)[..]) is an implicit subquery that resamples.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -570,7 +664,7 @@
             "mode": "fixed",
             "fixedColor": "#199e70"
           },
-          "unit": "kwatth",
+          "unit": "suffix: kWh",
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -581,7 +675,7 @@
               }
             ]
           },
-          "decimals": 0
+          "decimals": 2
         },
         "overrides": []
       },
@@ -626,7 +720,7 @@
       "id": 108,
       "type": "stat",
       "title": "",
-      "description": "What is holding the clocks back right now, most severe first: HW slowdown, power brake, HW thermal, SW thermal, SW power cap (the card at its power limit -- normal under full load), or a driver recovery action. Idle downclocking is not a limiter.",
+      "description": "What is limiting the clocks right now (any flag in the last 2 minutes), most specific cause first: power brake, HW thermal, SW thermal, the umbrella HW-slowdown flag (NVIDIA: it also fires on P-state changes), SW power cap (the card at its power limit -- normal under full load), or a driver recovery action. Offline = no samples.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -658,22 +752,22 @@
                   "index": 1
                 },
                 "2": {
-                  "text": "Thermal (SW)",
+                  "text": "HW slowdown",
                   "color": "#fab219",
                   "index": 2
                 },
                 "3": {
-                  "text": "Thermal (HW)",
-                  "color": "#d03b3b",
+                  "text": "Thermal (SW)",
+                  "color": "#fab219",
                   "index": 3
                 },
                 "4": {
-                  "text": "Power brake",
+                  "text": "Thermal (HW)",
                   "color": "#d03b3b",
                   "index": 4
                 },
                 "5": {
-                  "text": "HW slowdown",
+                  "text": "Power brake",
                   "color": "#d03b3b",
                   "index": 5
                 },
@@ -681,6 +775,11 @@
                   "text": "Recovery needed",
                   "color": "#d03b3b",
                   "index": 6
+                },
+                "7": {
+                  "text": "Offline",
+                  "color": "#898781",
+                  "index": 7
                 }
               }
             }
@@ -698,7 +797,7 @@
               },
               {
                 "color": "#d03b3b",
-                "value": 3
+                "value": 4
               }
             ]
           },
@@ -718,7 +817,7 @@
         "textMode": "value_and_name",
         "wideLayout": false,
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "showPercentChange": false,
         "text": {
@@ -732,10 +831,10 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(label_set(max(nvidia_smi_clocks_event_reasons_sw_power_cap{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 1, \"r\", \"a\") or label_set(max(nvidia_smi_clocks_event_reasons_sw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 2, \"r\", \"b\") or label_set(max(nvidia_smi_clocks_event_reasons_hw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 3, \"r\", \"c\") or label_set(max(nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 4, \"r\", \"d\") or label_set(max(nvidia_smi_clocks_event_reasons_hw_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 5, \"r\", \"e\") or label_set((max(nvidia_smi_gpu_recovery_action{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) > bool 0) * 6, \"r\", \"f\"))",
+          "expr": "max(label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_sw_power_cap{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 1, \"r\", \"1\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 2, \"r\", \"2\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_sw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 3, \"r\", \"3\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 4, \"r\", \"4\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 5, \"r\", \"5\") or label_set((max(max_over_time(nvidia_smi_gpu_recovery_action{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) > bool 0) * 6, \"r\", \"6\")) or on() vector(7)",
           "legendFormat": "Clock limiter",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "A"
         }
       ]
@@ -757,7 +856,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "Power",
-      "description": "Board power per step: average (filled) and peak (thin line), against the enforced power limit (dashed). The axis keeps the whole budget in view so idle reads as idle; the peak line keeps short full-load bursts visible at long ranges.",
+      "description": "Board power per step: average (filled) and peak (dotted), against the enforced power limit (dashed). The axis keeps the whole budget in view so idle reads as idle; the peak line keeps short full-load bursts visible at long ranges.",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -866,7 +965,17 @@
               },
               {
                 "id": "custom.lineWidth",
-                "value": 1
+                "value": 2
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dot",
+                  "dash": [
+                    0,
+                    4
+                  ]
+                }
               }
             ]
           }
@@ -927,7 +1036,7 @@
       "title": "Temperature",
       "description": "Die temperature (hottest sample per step) against the driver's thermal slowdown point (dashed: temperature + temperature.gpu.tlimit headroom, hour-averaged because the two gauges are sampled a moment apart and jitter by 1 C).",
       "gridPos": {
-        "h": 8,
+        "h": 5,
         "w": 8,
         "x": 8,
         "y": 5
@@ -1063,10 +1172,108 @@
       ]
     },
     {
+      "id": 17,
+      "type": "timeseries",
+      "title": "Fan",
+      "description": "Fan duty per step. 0% at idle is the card's zero-RPM mode, not a fault. Its own chart rather than a second axis on Temperature (two y-scales on one plot invent a correlation).",
+      "gridPos": {
+        "h": 3,
+        "w": 8,
+        "x": 8,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#c98500"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 16,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(avg_over_time(nvidia_smi_fan_speed_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))",
+          "legendFormat": "fan",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
       "id": 4,
       "type": "timeseries",
       "title": "Daily Energy (30d)",
-      "description": "kWh per local day, today last (so far). integrate() over the raw power samples, looking FORWARD one day from each local-midnight step (offset -1d) -- the backward form draws each day on the next day's midnight. VictoriaMetrics stops the forward window at now, so today's bar is not extrapolated (verified against a raw-sample trapezoid, 2026-09-27).",
+      "description": "kWh per local day, today last (so far): the sum of 5-minute integrate() windows over the raw power samples, looking FORWARD one day from each local-midnight step (offset -1d; the backward form draws each day on the next day's midnight). Short windows stop a trailing outage from being filled with the last reading -- a whole-day integrate() range query held 1 W from 16:01 to midnight on 10 Sep (0.0366 vs 0.0287 kWh measured).",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -1150,7 +1357,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum(integrate(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[1d] offset -1d)) / 3.6e6",
+          "expr": "sum(sum_over_time(integrate(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[5m])[1d:5m] offset -1d)) / 3.6e6",
           "legendFormat": "energy",
           "instant": false,
           "range": true,
@@ -1178,7 +1385,7 @@
       "id": 6,
       "type": "timeseries",
       "title": "Utilization",
-      "description": "SM utilization and memory-controller (bus) utilization, averaged per step, on one 0-100% axis. This card also drives a display, so the memory bus stays busy (scan-out) even when compute is idle.",
+      "description": "GPU busy = share of time a kernel was running (utilization.gpu). Memory bandwidth = memory-controller busy time scaled by the memory clock against its maximum (utilization.memory x clock / max clock). The raw utilization.memory counts busy time at the CURRENT clock, so display scan-out on a downclocked idle card read 51% at 405 MHz and 2% at 13.8 GHz -- the scaled line is what fraction of peak bandwidth was actually used. Per-step averages; the product is sampled every 2 minutes (panel min step 2m) so a 30-day view stays under VictoriaMetrics' 100k-points-per-subquery limit (good to ~139 days).",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -1246,7 +1453,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "SM"
+              "options": "GPU busy"
             },
             "properties": [
               {
@@ -1261,7 +1468,7 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "memory bus"
+              "options": "memory bandwidth"
             },
             "properties": [
               {
@@ -1295,7 +1502,7 @@
             "uid": "vm"
           },
           "expr": "max(avg_over_time(nvidia_smi_utilization_gpu_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))",
-          "legendFormat": "SM",
+          "legendFormat": "GPU busy",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -1305,13 +1512,14 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(avg_over_time(nvidia_smi_utilization_memory_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))",
-          "legendFormat": "memory bus",
+          "expr": "max(avg_over_time((nvidia_smi_utilization_memory_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"} * nvidia_smi_clocks_current_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"} / nvidia_smi_clocks_max_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})[$__interval:2m]))",
+          "legendFormat": "memory bandwidth",
           "instant": false,
           "range": true,
           "refId": "B"
         }
-      ]
+      ],
+      "interval": "2m"
     },
     {
       "id": 7,
@@ -1338,7 +1546,7 @@
             "drawStyle": "line",
             "lineInterpolation": "smooth",
             "lineWidth": 1,
-            "fillOpacity": 30,
+            "fillOpacity": 14,
             "gradientMode": "opacity",
             "barAlignment": 0,
             "barWidthFactor": 0.62,
@@ -1434,7 +1642,7 @@
             "properties": [
               {
                 "id": "custom.fillOpacity",
-                "value": 12
+                "value": 6
               }
             ]
           }
@@ -1644,11 +1852,11 @@
     {
       "id": 10,
       "type": "state-timeline",
-      "title": "Clock Limiter",
-      "description": "What limited the clocks over time, most severe reason per step (same coding as the Clock limiter card). Grey = nothing limiting. Power cap under full load is normal: the card is at its power limit.",
+      "title": "Clock Limiter & P-State",
+      "description": "Two rows on one time axis. Clock limiter: the most specific active reason in each step, taking any flag raised within the step (max_over_time) so brief events survive long ranges; a faint band means data but nothing limiting, a gap means no data. P-state: the most common state in each step (mode_over_time) -- time-in-state stays honest (the busiest-state reduction painted P1 over 93% of a day that spent 38% there); P0 = maximum performance, P8+ = idle.",
       "gridPos": {
-        "h": 5,
-        "w": 8,
+        "h": 6,
+        "w": 18,
         "x": 0,
         "y": 23
       },
@@ -1667,37 +1875,37 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "none",
-                  "color": "#383835",
+                  "text": "",
+                  "color": "rgba(137, 135, 129, 0.14)",
                   "index": 0
                 },
                 "1": {
-                  "text": "power cap",
+                  "text": "Power cap",
                   "color": "#fab219",
                   "index": 1
                 },
                 "2": {
-                  "text": "thermal (SW)",
+                  "text": "HW slowdown",
                   "color": "#fab219",
                   "index": 2
                 },
                 "3": {
-                  "text": "thermal (HW)",
-                  "color": "#d03b3b",
+                  "text": "Thermal (SW)",
+                  "color": "#fab219",
                   "index": 3
                 },
                 "4": {
-                  "text": "power brake",
+                  "text": "Thermal (HW)",
                   "color": "#d03b3b",
                   "index": 4
                 },
                 "5": {
-                  "text": "HW slowdown",
+                  "text": "Power brake",
                   "color": "#d03b3b",
                   "index": 5
                 },
                 "6": {
-                  "text": "recovery needed",
+                  "text": "Recovery needed",
                   "color": "#d03b3b",
                   "index": 6
                 }
@@ -1715,7 +1923,7 @@
           },
           "custom": {
             "lineWidth": 0,
-            "fillOpacity": 80,
+            "fillOpacity": 85,
             "insertNulls": false,
             "spanNulls": false,
             "hideFrom": {
@@ -1725,7 +1933,106 @@
             }
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "P-state"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "P0",
+                        "color": "#9ec5f4",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "P1",
+                        "color": "#6da7ec",
+                        "index": 1
+                      },
+                      "2": {
+                        "text": "P2",
+                        "color": "#6da7ec",
+                        "index": 2
+                      },
+                      "3": {
+                        "text": "P3",
+                        "color": "#3987e5",
+                        "index": 3
+                      },
+                      "4": {
+                        "text": "P4",
+                        "color": "#3987e5",
+                        "index": 4
+                      },
+                      "5": {
+                        "text": "P5",
+                        "color": "#256abf",
+                        "index": 5
+                      },
+                      "6": {
+                        "text": "P6",
+                        "color": "#256abf",
+                        "index": 6
+                      },
+                      "7": {
+                        "text": "P7",
+                        "color": "#256abf",
+                        "index": 7
+                      },
+                      "8": {
+                        "text": "P8",
+                        "color": "#184f95",
+                        "index": 8
+                      },
+                      "9": {
+                        "text": "P9",
+                        "color": "#184f95",
+                        "index": 9
+                      },
+                      "10": {
+                        "text": "P10",
+                        "color": "#184f95",
+                        "index": 10
+                      },
+                      "11": {
+                        "text": "P11",
+                        "color": "#184f95",
+                        "index": 11
+                      },
+                      "12": {
+                        "text": "P12",
+                        "color": "#184f95",
+                        "index": 12
+                      },
+                      "13": {
+                        "text": "P13",
+                        "color": "#184f95",
+                        "index": 13
+                      },
+                      "14": {
+                        "text": "P14",
+                        "color": "#184f95",
+                        "index": 14
+                      },
+                      "15": {
+                        "text": "P15",
+                        "color": "#184f95",
+                        "index": 15
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "mergeValues": true,
@@ -1749,24 +2056,35 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(label_set(max(nvidia_smi_clocks_event_reasons_sw_power_cap{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 1, \"r\", \"a\") or label_set(max(nvidia_smi_clocks_event_reasons_sw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 2, \"r\", \"b\") or label_set(max(nvidia_smi_clocks_event_reasons_hw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 3, \"r\", \"c\") or label_set(max(nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 4, \"r\", \"d\") or label_set(max(nvidia_smi_clocks_event_reasons_hw_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) * 5, \"r\", \"e\") or label_set((max(nvidia_smi_gpu_recovery_action{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) > bool 0) * 6, \"r\", \"f\"))",
-          "legendFormat": "limiter",
+          "expr": "max(label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_sw_power_cap{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval])) * 1, \"r\", \"1\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval])) * 2, \"r\", \"2\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_sw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval])) * 3, \"r\", \"3\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval])) * 4, \"r\", \"4\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval])) * 5, \"r\", \"5\") or label_set((max(max_over_time(nvidia_smi_gpu_recovery_action{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval])) > bool 0) * 6, \"r\", \"6\"))",
+          "legendFormat": "Clock limiter",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "min(mode_over_time(nvidia_smi_pstate{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))",
+          "legendFormat": "P-state",
+          "instant": false,
+          "range": true,
+          "refId": "B"
         }
       ],
-      "interval": "1m"
+      "interval": "5m"
     },
     {
       "id": 11,
       "type": "stat",
       "title": "Throttled",
-      "description": "Total time any throttle reason held the clocks over the dashboard range, from the driver's cumulative clock-event counters (catches events between scrapes that the instantaneous flags miss). SW power cap dominates on this card.",
+      "description": "How long a specific throttle reason (power cap, SW/HW thermal, power brake) held the clocks over the dashboard range, from the 15-second flags: the flagged share of samples x the range. The driver's cumulative *_seconds counters are not used -- on this box the power-cap counter froze at 235 s while the flag kept firing. The umbrella HW-slowdown flag is left out (it also fires on P-state changes).",
       "gridPos": {
-        "h": 5,
-        "w": 4,
-        "x": 8,
+        "h": 6,
+        "w": 6,
+        "x": 18,
         "y": 23
       },
       "datasource": {
@@ -1793,7 +2111,24 @@
           "decimals": 1,
           "noValue": "0"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -1804,14 +2139,15 @@
           "values": false
         },
         "orientation": "auto",
-        "textMode": "value",
+        "textMode": "value_and_name",
         "wideLayout": true,
         "colorMode": "none",
         "graphMode": "none",
         "justifyMode": "auto",
         "showPercentChange": false,
         "text": {
-          "valueSize": 26
+          "valueSize": 22,
+          "titleSize": 12
         }
       },
       "targets": [
@@ -1820,175 +2156,24 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum(increase({__name__=~\"nvidia_smi_clocks_event_reasons_counters_(sw_power_cap|sw_thermal_slowdown|hw_thermal_slowdown|hw_power_brake_slowdown)_seconds\",job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__range]))",
-          "legendFormat": "throttled",
-          "instant": false,
-          "range": true,
+          "expr": "sum(avg_over_time({__name__=~\"nvidia_smi_clocks_event_reasons_(sw_power_cap|sw_thermal_slowdown|hw_thermal_slowdown|hw_power_brake_slowdown)\",job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__range])) * $__range_s",
+          "legendFormat": "Time",
+          "instant": true,
+          "range": false,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(avg_over_time({__name__=~\"nvidia_smi_clocks_event_reasons_(sw_power_cap|sw_thermal_slowdown|hw_thermal_slowdown|hw_power_brake_slowdown)\",job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__range]))",
+          "legendFormat": "Share of range",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ]
-    },
-    {
-      "id": 12,
-      "type": "state-timeline",
-      "title": "P-State",
-      "description": "Performance state, P0 = maximum performance, P8 and up = idle. Shows the highest-performance state reached in each step (min over the interval) so short bursts are not lost at long ranges; shades run from bright (busy) to dark (idle).",
-      "gridPos": {
-        "h": 5,
-        "w": 12,
-        "x": 12,
-        "y": 23
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#898781"
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "P0",
-                  "color": "#9ec5f4",
-                  "index": 0
-                },
-                "1": {
-                  "text": "P1",
-                  "color": "#6da7ec",
-                  "index": 1
-                },
-                "2": {
-                  "text": "P2",
-                  "color": "#6da7ec",
-                  "index": 2
-                },
-                "3": {
-                  "text": "P3",
-                  "color": "#3987e5",
-                  "index": 3
-                },
-                "4": {
-                  "text": "P4",
-                  "color": "#3987e5",
-                  "index": 4
-                },
-                "5": {
-                  "text": "P5",
-                  "color": "#256abf",
-                  "index": 5
-                },
-                "6": {
-                  "text": "P6",
-                  "color": "#256abf",
-                  "index": 6
-                },
-                "7": {
-                  "text": "P7",
-                  "color": "#256abf",
-                  "index": 7
-                },
-                "8": {
-                  "text": "P8",
-                  "color": "#184f95",
-                  "index": 8
-                },
-                "9": {
-                  "text": "P9",
-                  "color": "#184f95",
-                  "index": 9
-                },
-                "10": {
-                  "text": "P10",
-                  "color": "#184f95",
-                  "index": 10
-                },
-                "11": {
-                  "text": "P11",
-                  "color": "#184f95",
-                  "index": 11
-                },
-                "12": {
-                  "text": "P12",
-                  "color": "#184f95",
-                  "index": 12
-                },
-                "13": {
-                  "text": "P13",
-                  "color": "#184f95",
-                  "index": 13
-                },
-                "14": {
-                  "text": "P14",
-                  "color": "#184f95",
-                  "index": 14
-                },
-                "15": {
-                  "text": "P15",
-                  "color": "#184f95",
-                  "index": 15
-                }
-              }
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#898781",
-                "value": null
-              }
-            ]
-          },
-          "custom": {
-            "lineWidth": 0,
-            "fillOpacity": 80,
-            "insertNulls": false,
-            "spanNulls": false,
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "mergeValues": true,
-        "showValue": "auto",
-        "alignValue": "left",
-        "rowHeight": 0.8,
-        "legend": {
-          "showLegend": false,
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none",
-          "hideZeros": false
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "min(min_over_time(nvidia_smi_pstate{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))",
-          "legendFormat": "P-state",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "interval": "1m"
     },
     {
       "id": 13,
@@ -1999,7 +2184,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 28
+        "y": 29
       },
       "panels": []
     },
@@ -2007,12 +2192,12 @@
       "id": 14,
       "type": "table",
       "title": "Device",
-      "description": "Identity of the selected GPU from nvidia_smi_gpu_info (last seen within 30 days).",
+      "description": "Identity of the selected GPU from nvidia_smi_gpu_info: the newest label set seen in 30 days (topk_max on the last-sample timestamp, so a driver upgrade replaces the old row instead of adding a column).",
       "gridPos": {
         "h": 9,
-        "w": 8,
+        "w": 7,
         "x": 0,
-        "y": 29
+        "y": 30
       },
       "datasource": {
         "type": "prometheus",
@@ -2052,7 +2237,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 150
+                "value": 140
               },
               {
                 "id": "displayName",
@@ -2126,7 +2311,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max by (name, driver_version, cuda_version, vbios_version, compute_cap, driver_model_current, pci_bus_id)(last_over_time(nvidia_smi_gpu_info{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[30d]))",
+          "expr": "max by (name, driver_version, cuda_version, vbios_version, compute_cap, driver_model_current, pci_bus_id)(topk_max(1, tlast_over_time(nvidia_smi_gpu_info{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[30d])))",
           "legendFormat": "__auto",
           "instant": true,
           "range": false,
@@ -2142,9 +2327,9 @@
       "description": "Where the card sits against its own ceilings right now: power against the enforced limit, VRAM against capacity, clocks against their maxima, and the PCIe link against what the card supports (a link running narrower than its maximum -- e.g. x8 of x16 -- is set by the slot or riser; it barely matters for inference, where weights stay on the card).",
       "gridPos": {
         "h": 9,
-        "w": 10,
-        "x": 8,
-        "y": 29
+        "w": 11,
+        "x": 7,
+        "y": 30
       },
       "datasource": {
         "type": "prometheus",
@@ -2184,8 +2369,8 @@
             },
             "properties": [
               {
-                "id": "custom.minWidth",
-                "value": 170
+                "id": "custom.width",
+                "value": 165
               }
             ]
           },
@@ -2197,15 +2382,11 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 70
               },
               {
                 "id": "custom.align",
                 "value": "right"
-              },
-              {
-                "id": "decimals",
-                "value": null
               }
             ]
           },
@@ -2217,15 +2398,11 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 70
               },
               {
                 "id": "custom.align",
                 "value": "right"
-              },
-              {
-                "id": "decimals",
-                "value": null
               }
             ]
           },
@@ -2250,6 +2427,10 @@
               {
                 "id": "max",
                 "value": 1
+              },
+              {
+                "id": "custom.minWidth",
+                "value": 120
               },
               {
                 "id": "color",
@@ -2363,12 +2544,12 @@
       "id": 16,
       "type": "stat",
       "title": "Exporter",
-      "description": "Health of the metrics path on the GPU box: the vmagent scrape of the exporter, whether the exporter's last nvidia-smi call succeeded, how long it took, failed scrapes over the dashboard range, and how old the newest GPU sample is.",
+      "description": "Health of the metrics path on the GPU box, evaluated now: the vmagent scrape of the exporter and the exporter's last nvidia-smi call (vmagent runs on the box, so an outage leaves no samples at all -- missing reads DOWN / FAILING), how long the call took, failed scrapes over the dashboard range, and how old the newest GPU sample is.",
       "gridPos": {
         "h": 9,
         "w": 6,
         "x": 18,
-        "y": 29
+        "y": 30
       },
       "datasource": {
         "type": "prometheus",
@@ -2609,10 +2790,10 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(last_over_time(up{job=\"gpu\",host=~\"$host\"}[2m]))",
+          "expr": "max(last_over_time(up{job=\"gpu\",host=~\"$host\"}[2m])) or on() vector(0)",
           "legendFormat": "Scrape",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "A"
         },
         {
@@ -2620,10 +2801,10 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(last_over_time(nvidia_smi_last_collect_success{job=\"gpu\",host=~\"$host\"}[2m]))",
+          "expr": "max(last_over_time(nvidia_smi_last_collect_success{job=\"gpu\",host=~\"$host\"}[2m])) or on() vector(0)",
           "legendFormat": "nvidia-smi",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "B"
         },
         {
@@ -2631,10 +2812,10 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(nvidia_smi_last_collect_duration_seconds{job=\"gpu\",host=~\"$host\"})",
+          "expr": "max(last_over_time(nvidia_smi_last_collect_duration_seconds{job=\"gpu\",host=~\"$host\"}[2m]))",
           "legendFormat": "Collect time",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "C"
         },
         {
@@ -2644,8 +2825,8 @@
           },
           "expr": "sum(increase(nvidia_smi_failed_scrapes_total{job=\"gpu\",host=~\"$host\"}[$__range]))",
           "legendFormat": "Failed scrapes",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "D"
         },
         {
@@ -2655,8 +2836,8 @@
           },
           "expr": "time() - max(tlast_over_time(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[30d]))",
           "legendFormat": "Newest sample",
-          "instant": false,
-          "range": true,
+          "instant": true,
+          "range": false,
           "refId": "E"
         }
       ]

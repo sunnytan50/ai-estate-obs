@@ -11,9 +11,17 @@ regression protection as the collector. Checks:
 - every dashboard: integrate() wraps a raw series selector -- integrate(max(m)[..])
   is an implicit subquery that resamples the series (read 0.85% high against a
   raw-sample trapezoid, 2026-09-27)
+- every dashboard: a `[$__interval:<step>]` subquery runs on a panel whose
+  min interval is that step (no empty windows, no 100k-points overrun)
+- every dashboard: integrate() windows are short (5m or one step) -- a
+  whole-day integrate() range query carried the last reading through an
+  outage (read 27% high for 10 Sep)
 - gpu-detail.json: queries select the box by its `host` label, never by
   `instance` (the exporter listens on loopback, so every box shares one
   instance value), and the daily energy bars look forward one day
+- gpu-detail.json: the headline cards are pinned to a short window (or are
+  instant) so a long dashboard range never shows an hours-old step as "now",
+  and the Exporter / Throttled panels are evaluated now (instant)
 - estate.json: the pushed cumulative counters (`aiobs_tokens_total`,
   `aiobs_cost_usd_total`) are never read through `increase()` -- verified
   unreliable on this day-granular data (README, "Extending the dashboards").
@@ -141,6 +149,30 @@ class TestAllDashboards(unittest.TestCase):
                 for var in VAR_RE.findall(expr):
                     self.assertIn(
                         var, defined, f"{name}: panel {panel['id']} ({panel.get('title')}) references undefined ${var}"
+                    )
+
+    def test_integrate_windows_are_short(self):
+        for name in EXPECTED_UIDS:
+            for panel, expr in _exprs(_load(name)):
+                for arg in _call_args(expr, "integrate"):
+                    windows = re.findall(r"\[([^\]]+)\]", arg)
+                    for window in windows:
+                        self.assertIn(
+                            window,
+                            ("5m", "$__interval"),
+                            f"{name}: panel {panel['id']} ({panel.get('title')}) integrates over [{window}] -- "
+                            "sum 5-minute windows instead: sum_over_time(integrate(m[5m])[<range>:5m])",
+                        )
+
+    def test_fixed_step_subqueries_match_the_panel_step(self):
+        # `[$__interval:<step>]` needs a panel min interval of <step>: shorter outer steps leave windows with no
+        # subquery points (gaps), and a finer subquery step overruns VictoriaMetrics' 100k points-per-subquery limit
+        # on long ranges (a 15s step errored at 30 days).
+        for name in EXPECTED_UIDS:
+            for panel, expr in _exprs(_load(name)):
+                for step in re.findall(r"\[\$__interval:([0-9]+[smhd])\]", expr):
+                    self.assertEqual(
+                        panel.get("interval"), step, f"{name}: panel {panel['id']} ({panel.get('title')}) subquery step {step}"
                     )
 
     def test_integrate_wraps_a_raw_selector(self):
@@ -276,6 +308,23 @@ class TestGpuDashboard(unittest.TestCase):
             query = var.get("query", "")
             query = query.get("query", "") if isinstance(query, dict) else query
             self.assertNotIn("instance", query, f"variable {var['name']} keys on instance")
+
+    def test_headline_cards_are_pinned_or_instant(self):
+        for panel in self.dash["panels"]:
+            if panel.get("type") != "stat" or panel["gridPos"]["y"] != 0:
+                continue
+            instant = all(t.get("instant") for t in panel.get("targets", []))
+            self.assertTrue(
+                panel.get("timeFrom") or instant,
+                f"card {panel['id']} follows the dashboard range -- at 30d its last step is hours old",
+            )
+
+    def test_health_panels_are_evaluated_now(self):
+        titles = {p.get("title"): p for p in _walk(self.dash["panels"])}
+        for title in ("Exporter", "Throttled"):
+            self.assertIn(title, titles)
+            for target in titles[title]["targets"]:
+                self.assertTrue(target.get("instant"), f"{title} {target['refId']} must be an instant query")
 
     def test_daily_energy_looks_forward(self):
         for panel in _walk(self.dash["panels"]):

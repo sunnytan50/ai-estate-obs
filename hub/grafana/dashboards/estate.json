@@ -2,21 +2,31 @@
   "id": null,
   "uid": "aiobs-estate",
   "title": "AI Estate",
-  "description": "Flagship estate overview: GPU power/thermal, local inference throughput, cloud token/cost flow by provider, and collector lane health. Provider / Model / Token kind dropdowns drive the Cloud Tokens row.",
+  "description": "Estate overview: headline spend/token KPIs, cloud spend and tokens by provider and model, the local GPU box (power, utilization, engine, throughput, latency) and pipeline health. Provider / Model / Token kind dropdowns drive every cloud panel; provider colours are fixed dashboard-wide.",
   "tags": [
     "aiobs"
   ],
-  "style": "dark",
   "timezone": "browser",
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 7,
+  "version": 8,
   "refresh": "30s",
   "time": {
     "from": "now-24h",
     "to": "now"
   },
+  "timepicker": {
+    "refresh_intervals": [
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "1h"
+    ]
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
   "links": [
     {
       "asDropdown": false,
@@ -173,28 +183,530 @@
   },
   "panels": [
     {
-      "id": 1,
-      "type": "row",
-      "title": "Power",
-      "collapsed": false,
+      "id": 101,
+      "type": "stat",
+      "title": "",
+      "description": "Cloud spend since local midnight, all selected providers/models (hermes excluded -- see the anti-double-count rule). Sparkline: the last 14 local days, today last. Day-granular counters use the forward-looking daily delta (see Daily Spend by Provider).",
       "gridPos": {
-        "h": 1,
-        "w": 24,
+        "h": 4,
+        "w": 3,
         "x": 0,
         "y": 0
       },
-      "panels": []
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "currencyUSD",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -1d) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -1d)*0)))",
+          "legendFormat": "Spend today",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "14d",
+      "hideTimeOverride": true,
+      "interval": "1d"
     },
     {
-      "id": 2,
-      "type": "gauge",
-      "title": "GPU Power Now",
-      "description": "Live nvidia-smi power draw, the GPU box.",
+      "id": 102,
+      "type": "stat",
+      "title": "",
+      "description": "Cloud spend since the start of the local calendar month (panel pinned to now/M; the baseline is read with @ ${__from:date:seconds}). The now-side looks ahead one hourly step so the tile includes the newest collector push. Range query reduced to its last point -- VictoriaMetrics' instant path can mis-evaluate this max_over_time + large-offset shape (README troubleshooting).",
       "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 0,
-        "y": 1
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "currencyUSD",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval)*0)))",
+          "legendFormat": "Spend this month",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "now/M",
+      "hideTimeOverride": true,
+      "interval": "1h"
+    },
+    {
+      "id": 103,
+      "type": "stat",
+      "title": "",
+      "description": "Linear run-rate: spend this month x (days in month / days elapsed); the sparkline is how the projection moved through the month. A projection, not a forecast -- one heavy day moves it. days_in_month() is evaluated on a timestamp three days into the local month so the UTC-based function names the right month.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "currencyUSD",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval)*0))) * (days_in_month(vector(${__from:date:seconds} + 259200)) * 86400) / (now() - ${__from:date:seconds})",
+          "legendFormat": "Month-end run-rate",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "now/M",
+      "hideTimeOverride": true,
+      "interval": "1h"
+    },
+    {
+      "id": 104,
+      "type": "stat",
+      "title": "",
+      "description": "Cloud tokens since the start of the local month, all kinds selected in Token kind (cache reads usually dominate). Same @-anchored, look-ahead subtraction as Spend this month.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -$__interval) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -$__interval)*0)))",
+          "legendFormat": "Tokens this month",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "now/M",
+      "hideTimeOverride": true,
+      "interval": "1h"
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "",
+      "description": "Share of prompt-side tokens served from the provider's prompt cache this month: cache_read / (input + cache_read + cache_write). Ignores the Token kind dropdown (it is a ratio of kinds). Sparkline: the month-to-date ratio as the month progressed.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "percentunit",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1,
+          "min": 0.9,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"cache_read\"}[400d] offset -$__interval) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"cache_read\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"cache_read\"}[400d] offset -$__interval)*0))) / sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"input|cache_read|cache_write\"}[400d] offset -$__interval) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"input|cache_read|cache_write\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"input|cache_read|cache_write\"}[400d] offset -$__interval)*0)))",
+          "legendFormat": "Cache hit rate",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "now/M",
+      "hideTimeOverride": true,
+      "interval": "1h"
+    },
+    {
+      "id": 106,
+      "type": "stat",
+      "title": "",
+      "description": "nvidia-smi board power on the GPU box: 5-minute averages over the last 6 hours; the value is the latest 5-minute average.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#199e70"
+          },
+          "unit": "watt",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "noValue": "offline"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(avg_over_time(nvidia_smi_power_draw_watts[$__interval]))",
+          "legendFormat": "GPU power",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "6h",
+      "hideTimeOverride": true,
+      "interval": "5m",
+      "maxDataPoints": 72
+    },
+    {
+      "id": 107,
+      "type": "stat",
+      "title": "",
+      "description": "Prompt + generated tokens processed by the local inference server since local midnight, whichever engine is resident (vLLM, SGLang or llama.cpp -- one __name__ regex covers all three). Real scraped counters, so increase() is fine here.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#199e70"
+          },
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "running_sum(sum(increase({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\"}[$__interval]) keep_metric_names) + sum(increase({__name__=~\"vllm:prompt_tokens_total|sglang:prompt_tokens_total|llamacpp:prompt_tokens_total|llamacpp_prompt_tokens_total\"}[$__interval]) keep_metric_names))",
+          "legendFormat": "Local tokens today",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "now/d",
+      "hideTimeOverride": true,
+      "interval": "5m"
+    },
+    {
+      "id": 108,
+      "type": "stat",
+      "title": "",
+      "description": "How many pipeline signals are down: the tokscale and openrouter collector lanes (a success in the last 20 minutes) and the GPU exporter scrape (last 2 minutes). A signal that has gone silent but was seen in the last 30 days counts as down. Sparkline: the last 6 hours. Details in Estate Timeline and Collector Lanes at the bottom.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 0
       },
       "datasource": {
         "type": "prometheus",
@@ -205,39 +717,69 @@
           "color": {
             "mode": "thresholds"
           },
-          "unit": "watt",
-          "min": 0,
-          "max": 600,
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "✓ All up",
+                  "color": "#0ca30c",
+                  "index": 0
+                },
+                "1": {
+                  "text": "✕ 1 down",
+                  "color": "#d03b3b",
+                  "index": 1
+                },
+                "2": {
+                  "text": "✕ 2 down",
+                  "color": "#d03b3b",
+                  "index": 2
+                },
+                "3": {
+                  "text": "✕ 3 down",
+                  "color": "#d03b3b",
+                  "index": 3
+                }
+              }
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#0ca30c",
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 450
-              },
-              {
-                "color": "red",
-                "value": 550
+                "color": "#d03b3b",
+                "value": 1
               }
             ]
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
       "options": {
-        "orientation": "auto",
-        "showThresholdLabels": false,
-        "showThresholdMarkers": true,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 22,
+          "titleSize": 13
         }
       },
       "targets": [
@@ -246,92 +788,39 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "nvidia_smi_power_draw_watts",
-          "legendFormat": "__auto",
-          "instant": true,
-          "range": false,
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "type": "timeseries",
-      "title": "GPU Power",
-      "description": "Power draw of the GPU box. Shares its time axis (and the dashboard's shared crosshair) with Local Token Throughput directly below -- split from a former dual-axis watts+tok/s overlay so each measure keeps one honest axis.",
-      "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 6,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "watt",
-          "min": 0,
-          "mappings": [],
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "axisPlacement": "auto",
-            "axisLabel": "watts",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "nvidia_smi_power_draw_watts",
-          "legendFormat": "watts",
+          "expr": "(sum((1 - last_over_time(aiobs_lane_up[20m])) or (last_over_time(aiobs_lane_up[30d]) * 0 + 1)) or vector(0)) + (sum((1 - max(last_over_time(up{job=\"gpu\"}[2m]))) or (max(last_over_time(up{job=\"gpu\"}[30d])) * 0 + 1)) or vector(0))",
+          "legendFormat": "Pipeline",
           "instant": false,
           "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "timeFrom": "6h",
+      "hideTimeOverride": true,
+      "interval": "1m"
     },
     {
-      "id": 19,
-      "type": "timeseries",
-      "title": "Local Token Throughput",
-      "description": "Prompt (prefill) and generation throughput on one tok/s axis. Both sglang and the documented llama.cpp metric spellings are combined with label-preserving zero fallbacks, so an absent lane cannot hide an active one.",
+      "id": 1,
+      "type": "row",
+      "title": "Cloud Spend & Tokens",
+      "collapsed": false,
       "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 6,
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Daily Spend by Provider (30d)",
+      "description": "Stacked daily client-side USD cost per cloud provider; each bar is one LOCAL day and the last bar is today so far. Hermes is excluded (its client view mixes local and cloud-routed traffic; it has its own panel). Counters are pushed one sample per day (stamped 23:59:59 local) plus live points for today, so the query is a forward-looking two-point subtraction: at each local-midnight step D it takes max_over_time(...[400d] offset -1d) minus the counter as of D, with a label-preserving X or (X*0) fallback. The earlier backward form (offset 1d) put every bar one day late and never showed today -- verified 2026-09-27 against a raw /api/v1/export ground truth (Sep 24 = $1,992 sat under 09/25). Never increase(): verified up to ~27x off on this data. Colours are fixed per provider across the whole dashboard. Filtered by Provider / Model.",
+      "gridPos": {
+        "h": 9,
+        "w": 16,
+        "x": 0,
         "y": 5
       },
       "datasource": {
@@ -341,189 +830,126 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "palette-classic-by-name"
           },
-          "unit": "short",
-          "min": 0,
-          "mappings": [],
+          "unit": "currencyUSD",
           "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 0,
+            "fillOpacity": 88,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
             "pointSize": 5,
-            "showPoints": "auto",
             "spanNulls": false,
+            "insertNulls": false,
             "axisPlacement": "auto",
-            "axisLabel": "tok/s",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
             "scaleDistribution": {
               "type": "linear"
             },
             "stacking": {
-              "mode": "none",
+              "mode": "normal",
               "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
             }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
           },
-          "expr": "(sum(rate(sglang:prompt_tokens_total[1m])) or sum(rate(llamacpp:prompt_tokens_total[1m]))*0 or sum(rate(llamacpp_prompt_tokens_total[1m]))*0) + (sum(rate(llamacpp:prompt_tokens_total[1m])) or sum(rate(sglang:prompt_tokens_total[1m]))*0 or sum(rate(llamacpp_prompt_tokens_total[1m]))*0) + (sum(rate(llamacpp_prompt_tokens_total[1m])) or sum(rate(sglang:prompt_tokens_total[1m]))*0 or sum(rate(llamacpp:prompt_tokens_total[1m]))*0)",
-          "legendFormat": "prompt",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "(sum(rate(sglang:generation_tokens_total[1m])) or sum(rate(llamacpp:tokens_predicted_total[1m]))*0 or sum(rate(llamacpp_tokens_predicted_total[1m]))*0) + (sum(rate(llamacpp:tokens_predicted_total[1m])) or sum(rate(sglang:generation_tokens_total[1m]))*0 or sum(rate(llamacpp_tokens_predicted_total[1m]))*0) + (sum(rate(llamacpp_tokens_predicted_total[1m])) or sum(rate(sglang:generation_tokens_total[1m]))*0 or sum(rate(llamacpp:tokens_predicted_total[1m]))*0)",
-          "legendFormat": "generation",
-          "instant": false,
-          "range": true,
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "type": "stat",
-      "title": "Energy Today",
-      "description": "Energy since local midnight (panel pinned to now/d via timeFrom), computed with MetricsQL integrate() over the actual power samples, divided into kWh. Deliberately NOT avg_over_time(...) * $__range_s: that form extrapolates the sampled average across any unsampled hours, and on a partial-coverage day (exporter or box down for part of the day) it over-reported by ~3.4x, drifting DOWNWARD as idle samples accumulated -- caught live 2026-08-29 against a raw /api/v1/export trapezoid ground truth (integrate() matched within 0.25%). Issued as a range query reduced to its last value, per this project's standing rule for stat panels.",
-      "gridPos": {
-        "h": 3,
-        "w": 6,
-        "x": 18,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "unit": "kwatth",
-          "decimals": 2,
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "green",
                 "value": null
               }
             ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "value"
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "integrate(nvidia_smi_power_draw_watts[$__range]) / 3600 / 1000",
-          "legendFormat": "kWh",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        }
-      ],
-      "timeFrom": "now/d",
-      "hideTimeOverride": true
-    },
-    {
-      "id": 5,
-      "type": "timeseries",
-      "title": "VRAM / Temp",
-      "description": "GPU memory used (left axis, binary bytes) vs die temperature (right axis, deg C).",
-      "gridPos": {
-        "h": 5,
-        "w": 6,
-        "x": 18,
-        "y": 4
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "bytes",
-          "mappings": [],
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "axisPlacement": "auto",
-            "axisLabel": "VRAM",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
           }
         },
         "overrides": [
           {
             "matcher": {
               "id": "byName",
-              "options": "temp °C"
+              "options": "claude-code"
             },
             "properties": [
               {
-                "id": "unit",
-                "value": "celsius"
-              },
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "codex"
+            },
+            "properties": [
               {
-                "id": "custom.axisPlacement",
-                "value": "right"
-              },
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "droid"
+            },
+            "properties": [
               {
-                "id": "custom.axisLabel",
-                "value": "temp"
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "grok"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "openrouter"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
               }
             ]
           }
@@ -531,14 +957,15 @@
       },
       "options": {
         "legend": {
-          "calcs": [],
+          "showLegend": true,
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "none"
+          "sort": "desc",
+          "hideZeros": true
         }
       },
       "targets": [
@@ -547,497 +974,27 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "nvidia_smi_memory_used_bytes",
-          "legendFormat": "VRAM used",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "nvidia_smi_temperature_gpu",
-          "legendFormat": "temp °C",
-          "instant": false,
-          "range": true,
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "id": 6,
-      "type": "row",
-      "title": "Local Inference",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 9
-      },
-      "panels": []
-    },
-    {
-      "id": 7,
-      "type": "timeseries",
-      "title": "Prompt vs Generation (by model)",
-      "description": "Five-minute prompt and generation rates by model or active lane. The log10 axis keeps low generation rates visible beside prefill-heavy prompt traffic; zero-rate idle periods are not drawn on a logarithmic axis.",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 10
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short",
-          "mappings": [],
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "axisPlacement": "auto",
-            "scaleDistribution": {
-              "type": "log",
-              "log": 10
-            },
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            },
-            "axisLabel": "tok/s (log)"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "(sum by (model_name)(rate(sglang:prompt_tokens_total[5m])) or sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m]))*0) + (sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m])) or sum by (model_name)(rate(sglang:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m]))*0) + (sum by (model_name)(rate(llamacpp_prompt_tokens_total[5m])) or sum by (model_name)(rate(sglang:prompt_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp:prompt_tokens_total[5m]))*0)",
-          "legendFormat": "prompt {{model_name}}",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "(sum by (model_name)(rate(sglang:generation_tokens_total[5m])) or sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m]))*0 or sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m]))*0) + (sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m])) or sum by (model_name)(rate(sglang:generation_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m]))*0) + (sum by (model_name)(rate(llamacpp_tokens_predicted_total[5m])) or sum by (model_name)(rate(sglang:generation_tokens_total[5m]))*0 or sum by (model_name)(rate(llamacpp:tokens_predicted_total[5m]))*0)",
-          "legendFormat": "generation {{model_name}}",
-          "instant": false,
-          "range": true,
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "id": 8,
-      "type": "timeseries",
-      "title": "Latency (p50 / p95)",
-      "description": "End-to-end request latency, sglang: histogram (verified live name/labels; llama.cpp lane not yet resident).",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 10
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "s",
-          "mappings": [],
-          "custom": {
-            "drawStyle": "line",
-            "lineWidth": 1,
-            "fillOpacity": 10,
-            "pointSize": 5,
-            "showPoints": "auto",
-            "spanNulls": false,
-            "axisPlacement": "auto",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "histogram_quantile(0.5, sum by (le)(rate(sglang:e2e_request_latency_seconds_bucket[5m])))",
-          "legendFormat": "p50",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "histogram_quantile(0.95, sum by (le)(rate(sglang:e2e_request_latency_seconds_bucket[5m])))",
-          "legendFormat": "p95",
-          "instant": false,
-          "range": true,
-          "refId": "B"
-        }
-      ]
-    },
-    {
-      "id": 9,
-      "type": "row",
-      "title": "Cloud Tokens",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 18
-      },
-      "panels": []
-    },
-    {
-      "id": 10,
-      "type": "timeseries",
-      "title": "Daily Tokens by Provider (30d)",
-      "description": "Stacked daily token deltas per cloud-side provider (hermes excluded -- its client-side view mixes local + cloud-routed traffic and lives in its own attribution panel below, per the spec's anti-double-count rule). Query is a direct two-point counter subtraction -- max_over_time(...) minus its 1d-offset twin, each falling back to a zero-valued series that carries the SAME labels (X or (X*0), not X or vector(0), which has no labels and silently drops any series with no exact match) -- NOT increase(). increase() was verified live against this day-granular pushed data to be unreliable (window-size-dependent, off by up to ~27x); see README troubleshooting. Filtered by the Provider / Model / Token kind dropdowns (All = the previous unfiltered behaviour).",
-      "timeFrom": "30d",
-      "interval": "1d",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 19
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short",
-          "mappings": [],
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 100,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "axisPlacement": "auto",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0)))",
+          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -1d) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -1d)*0))) > 0",
           "legendFormat": "{{provider}}",
           "instant": false,
           "range": true,
           "refId": "A"
         }
-      ]
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "Cost per Day (30d)",
-      "description": "Daily client-side cost delta per cloud provider. Hermes is excluded to avoid double-counting its mixed local and cloud-routed client view. Uses the same two-point subtraction as the token panels, not increase(). Filtered by the Provider / Model dropdowns (cost series carry no kind label, so Token kind does not apply).",
+      ],
       "timeFrom": "30d",
-      "interval": "1d",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 19
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "currencyUSD",
-          "mappings": [],
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 100,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "axisPlacement": "auto",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 1d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))",
-          "legendFormat": "{{provider}}",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        }
-      ]
+      "hideTimeOverride": true,
+      "interval": "1d"
     },
     {
-      "id": 20,
-      "type": "timeseries",
-      "title": "Daily Tokens by Model (30d)",
-      "description": "Stacked daily token deltas per (provider, model) across cloud-side providers (hermes excluded, same anti-double-count rule as the provider panel). Same two-point max_over_time subtraction as every other counter panel here -- never increase(). Filtered by the Provider / Model / Token kind dropdowns (All = the previous unfiltered behaviour). Limited to the 12 largest series via MetricsQL topk_max(), which picks ONE series set for the whole range -- Prometheus topk() re-ranks at every step, which makes stacked daily bars flicker and mis-stack. Pick a single model in the dropdown to isolate it (e.g. gpt-6-astra).",
-      "timeFrom": "30d",
-      "interval": "1d",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 27
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "short",
-          "mappings": [],
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 100,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "axisPlacement": "auto",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "stacking": {
-              "mode": "normal",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "topk_max(12, sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0))))",
-          "legendFormat": "{{provider}} / {{model}}",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 21,
-      "type": "timeseries",
-      "title": "Cost per Day by Model (30d)",
-      "description": "Stacked daily USD cost deltas per (provider, model) across cloud-side providers (hermes excluded). Cost is whatever each source reports (tokscale's list-price estimate for the coding agents, OpenRouter's billed usage for the openrouter lane). Filtered by the Provider / Model dropdowns (cost series carry no kind label, so Token kind does not apply). Limited to the 12 largest series via MetricsQL topk_max(), which picks ONE series set for the whole range -- Prometheus topk() re-ranks at every step, which makes stacked daily bars flicker and mis-stack. Pick a single model in the dropdown to isolate it (e.g. gpt-6-astra).",
-      "timeFrom": "30d",
-      "interval": "1d",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 27
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "unit": "currencyUSD",
-          "mappings": [],
-          "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 100,
-            "pointSize": 5,
-            "showPoints": "never",
-            "spanNulls": false,
-            "axisPlacement": "auto",
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "stacking": {
-              "mode": "none",
-              "group": "A"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "topk_max(12, sum by (provider,model)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 1d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0))))",
-          "legendFormat": "{{provider}} / {{model}}",
-          "instant": false,
-          "range": true,
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 12,
-      "type": "stat",
-      "title": "Month-to-Date",
-      "description": "Cumulative tokens since the start of the current calendar month, per cloud-side provider (hermes excluded). Panel time range is pinned to now/M via timeFrom, independent of the dashboard's own 24h default. Deliberately issued as a range query reduced to its last point, not an instant query: verified live that VictoriaMetrics' instant-query path (/api/v1/query) can return a materially wrong result for this same max_over_time+large-offset expression at the exact same evaluation instant an identical range query (/api/v1/query_range) gets exactly right against a raw-export ground truth -- a second, separate reliability finding beyond increase(); see README troubleshooting. Filtered by the Provider / Model / Token kind dropdowns (All = the previous unfiltered behaviour). Month boundary is exact: the offset side is evaluated with the @ modifier at ${__from:date:seconds} (the panel's now/M range start = local month start), not `offset $__range` -- on a step grid the offset form landed the boundary inside the previous month's last day (verified live: it counted Aug 31) and the day-aligned grid excluded today. Hourly steps keep the last point, and the sparkline, current.",
-      "timeFrom": "now/M",
-      "interval": "1h",
+      "id": 22,
+      "type": "bargauge",
+      "title": "Cost Month-to-Date",
+      "description": "USD spend since the local month start per cloud provider, largest first (sort_desc). @ ${__from:date:seconds} anchors the month start exactly (offset $__range on a step grid landed inside the previous month's last day); the now-side looks ahead one hourly step so the bars include the newest push. Range query reduced to its last point. Filtered by Provider / Model.",
       "gridPos": {
         "h": 9,
-        "w": 6,
-        "x": 0,
-        "y": 35
+        "w": 8,
+        "x": 16,
+        "y": 5
       },
       "datasource": {
         "type": "prometheus",
@@ -1046,20 +1003,100 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "#898781"
           },
-          "unit": "short",
+          "unit": "currencyUSD",
+          "min": 0,
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "green",
                 "value": null
               }
             ]
-          }
+          },
+          "decimals": 2
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "claude-code"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "codex"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "droid"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "grok"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "openrouter"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -1069,11 +1106,25 @@
           "fields": "",
           "values": false
         },
-        "orientation": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
-        "justifyMode": "auto",
-        "textMode": "value_and_name"
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "manual",
+        "minVizWidth": 8,
+        "minVizHeight": 18,
+        "maxVizHeight": 26,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 15
+        }
       },
       "targets": [
         {
@@ -1081,31 +1132,735 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0)))",
+          "expr": "sort_desc(sum by (provider)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -$__interval)*0))) > 0)",
           "legendFormat": "{{provider}}",
           "instant": false,
           "range": true,
           "refId": "A"
         }
       ],
-      "hideTimeOverride": true
+      "timeFrom": "now/M",
+      "hideTimeOverride": true,
+      "interval": "1h"
     },
     {
-      "id": 13,
-      "type": "table",
-      "title": "Model Breakdown (30d)",
-      "description": "Every (provider, model) pair with usage in the last 30 days across cloud-side providers (hermes excluded -- controller ruling: a ranked table invites cross-provider summing by eye, which recreates the double-count the anti-double-count rule prevents; hermes's per-model breakdown lives in its own panel below). Three range queries (tokens of the selected kinds, output tokens, cost), each the same two-point max_over_time subtraction as the other counter panels, issued in table format and merged: merge -> sort by time -> group by provider+model taking each value's last point -> rename -> drop zero rows -> sort by tokens -> top 20. Range queries reduced to their last point rather than instant queries, for the reason given on the Month-to-Date tile. Column headers are filterable (type a model name). Filtered by the Provider / Model / Token kind dropdowns (All = the previous unfiltered behaviour). Evaluated on a 1-minute grid over a hidden 1-hour panel range so the last point (the value shown) is within a minute of now -- on the dashboard's day-aligned grid the table stopped at the last local midnight and today's usage never appeared until tomorrow. The 30-day window comes from the query's own offset, not the panel range.",
-      "interval": "1m",
+      "id": 10,
+      "type": "timeseries",
+      "title": "Daily Tokens by Provider (30d)",
+      "description": "Stacked daily token counts per cloud provider for the selected Token kind(s); one bar per local day, today last. Same forward-looking two-point subtraction as Daily Spend by Provider. With Token kind = All, cache reads dominate -- pick output or input to see the work behind the spend.",
       "gridPos": {
-        "h": 9,
-        "w": 12,
-        "x": 6,
-        "y": 35
+        "h": 8,
+        "w": 16,
+        "x": 0,
+        "y": 14
       },
       "datasource": {
         "type": "prometheus",
         "uid": "vm"
       },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 0,
+            "fillOpacity": 88,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "claude-code"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "codex"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "droid"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "grok"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "openrouter"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc",
+          "hideZeros": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -1d) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -1d)*0))) > 0",
+          "legendFormat": "{{provider}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "interval": "1d"
+    },
+    {
+      "id": 12,
+      "type": "bargauge",
+      "title": "Tokens Month-to-Date",
+      "description": "Tokens since the local month start per cloud provider, largest first. Same @-anchored subtraction as Cost Month-to-Date. Filtered by Provider / Model / Token kind.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "short",
+          "min": 0,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "claude-code"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "codex"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "droid"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "grok"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "openrouter"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "manual",
+        "minVizWidth": 8,
+        "minVizHeight": 18,
+        "maxVizHeight": 26,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 15
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sort_desc(sum by (provider)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -$__interval) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -$__interval)*0))) > 0)",
+          "legendFormat": "{{provider}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "now/M",
+      "hideTimeOverride": true,
+      "interval": "1h"
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Models",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "panels": []
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Cost per Day by Model (30d)",
+      "description": "Stacked daily USD cost per (provider, model), one bar per local day, today last. Legend is ranked by 30-day total. The 12 largest series are kept with MetricsQL topk_max(), which picks ONE series set for the whole range (Prometheus topk() re-ranks per step and makes stacked bars flicker). Each model wears a shade of its provider's colour (Grafana shades mode), so the provider mix reads at a glance and the legend/tooltip name the model. Pick a model in the Model dropdown to isolate it.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "unit": "currencyUSD",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 0,
+            "fillOpacity": 88,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-code / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^codex / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^droid / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^grok / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^openrouter / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ],
+          "sortBy": "Total",
+          "sortDesc": true,
+          "width": 420
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc",
+          "hideZeros": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "topk_max(12, sum by (provider,model)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -1d) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -1d)*0))) > 0)",
+          "legendFormat": "{{provider}} / {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "interval": "1d"
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Daily Tokens by Model (30d)",
+      "description": "Stacked daily tokens per (provider, model) for the selected Token kind(s), one bar per local day, today last; legend ranked by 30-day total. topk_max(12, ...) keeps one stable series set for the whole range; models wear shades of their provider's colour.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 0,
+            "fillOpacity": 88,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-code / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^codex / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^droid / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^grok / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^openrouter / .*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "shades",
+                  "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "sum"
+          ],
+          "sortBy": "Total",
+          "sortDesc": true,
+          "width": 420
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc",
+          "hideZeros": true
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "topk_max(12, sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -1d) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -1d)*0))) > 0)",
+          "legendFormat": "{{provider}} / {{model}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "interval": "1d"
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Model Breakdown (30d)",
+      "description": "Every (provider, model) pair with cloud usage in the last 30 days (hermes excluded -- a ranked table invites cross-provider summing by eye, which recreates the double-count the anti-double-count rule prevents), ranked by cost. Tokens follow the Token kind dropdown; Output is output tokens only; Share of Spend is each row's share of the 30-day cost of everything selected; $ / 1M Tokens is cost divided by the Tokens column (blended across the selected kinds). Each column is the same two-point max_over_time subtraction as the other counter panels (offset 30d), issued as range queries in table format and reduced to their last point (merge -> sort by time -> group by provider+model, last -> rename -> drop zero rows -> sort by cost -> top 20). Evaluated on a 1-minute grid over a hidden 10-minute panel range so the value shown is within a minute of now; the 30-day window comes from the offset. Column headers sort and filter.",
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 43
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "interval": "1m",
+      "timeFrom": "10m",
+      "hideTimeOverride": true,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1117,17 +1872,19 @@
             "cellOptions": {
               "type": "auto"
             },
-            "filterable": true
+            "filterable": true,
+            "inspect": false
           },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "text",
                 "value": null
               }
             ]
-          }
+          },
+          "mappings": []
         },
         "overrides": [
           {
@@ -1138,7 +1895,55 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 130
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "claude-code": {
+                        "color": "#d95926",
+                        "index": 0
+                      },
+                      "codex": {
+                        "color": "#3987e5",
+                        "index": 1
+                      },
+                      "droid": {
+                        "color": "#199e70",
+                        "index": 2
+                      },
+                      "grok": {
+                        "color": "#c98500",
+                        "index": 3
+                      },
+                      "openrouter": {
+                        "color": "#9085e9",
+                        "index": 4
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "pill"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Model"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 220
               }
             ]
           },
@@ -1150,11 +1955,15 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 125
+                "value": 130
               },
               {
                 "id": "custom.align",
                 "value": "right"
+              },
+              {
+                "id": "decimals",
+                "value": 2
               }
             ]
           },
@@ -1166,11 +1975,15 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 115
+                "value": 130
               },
               {
                 "id": "custom.align",
                 "value": "right"
+              },
+              {
+                "id": "decimals",
+                "value": 2
               }
             ]
           },
@@ -1182,7 +1995,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 110
+                "value": 120
               },
               {
                 "id": "unit",
@@ -1197,12 +2010,83 @@
                 "value": "right"
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "$ / 1M Tokens"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              },
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Share of Spend"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#898781"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
           }
         ]
       },
       "options": {
         "showHeader": true,
-        "cellHeight": "sm"
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
       },
       "transformations": [
         {
@@ -1249,6 +2133,18 @@
                   "lastNotNull"
                 ],
                 "operation": "aggregate"
+              },
+              "Value #D": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
+              },
+              "Value #E": {
+                "aggregations": [
+                  "lastNotNull"
+                ],
+                "operation": "aggregate"
               }
             }
           }
@@ -1262,14 +2158,18 @@
               "model": 1,
               "Value #A (lastNotNull)": 2,
               "Value #B (lastNotNull)": 3,
-              "Value #C (lastNotNull)": 4
+              "Value #C (lastNotNull)": 4,
+              "Value #D (lastNotNull)": 5,
+              "Value #E (lastNotNull)": 6
             },
             "renameByName": {
               "provider": "Provider",
               "model": "Model",
               "Value #A (lastNotNull)": "Tokens (30d)",
               "Value #B (lastNotNull)": "Output (30d)",
-              "Value #C (lastNotNull)": "Cost (30d)"
+              "Value #C (lastNotNull)": "Cost (30d)",
+              "Value #D (lastNotNull)": "Share of Spend",
+              "Value #E (lastNotNull)": "$ / 1M Tokens"
             }
           }
         },
@@ -1296,7 +2196,7 @@
           "options": {
             "sort": [
               {
-                "field": "Tokens (30d)",
+                "field": "Cost (30d)",
                 "desc": true
               }
             ]
@@ -1316,11 +2216,11 @@
             "uid": "vm"
           },
           "expr": "sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0)))",
-          "format": "table",
+          "legendFormat": "__auto",
           "instant": false,
           "range": true,
-          "legendFormat": "__auto",
-          "refId": "A"
+          "refId": "A",
+          "format": "table"
         },
         {
           "datasource": {
@@ -1328,11 +2228,11 @@
             "uid": "vm"
           },
           "expr": "sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"output\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"output\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=\"output\"}[400d])*0)))",
-          "format": "table",
+          "legendFormat": "__auto",
           "instant": false,
           "range": true,
-          "legendFormat": "__auto",
-          "refId": "B"
+          "refId": "B",
+          "format": "table"
         },
         {
           "datasource": {
@@ -1340,28 +2240,61 @@
             "uid": "vm"
           },
           "expr": "sum by (provider,model)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 30d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))",
-          "format": "table",
+          "legendFormat": "__auto",
           "instant": false,
           "range": true,
+          "refId": "C",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum by (provider,model)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 30d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))) / scalar(sum(sum by (provider,model)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 30d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))))",
           "legendFormat": "__auto",
-          "refId": "C"
+          "instant": false,
+          "range": true,
+          "refId": "D",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum by (provider,model)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 30d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))) / (sum by (provider,model)(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset 30d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d])*0)))) * 1e6",
+          "legendFormat": "__auto",
+          "instant": false,
+          "range": true,
+          "refId": "E",
+          "format": "table"
         }
-      ],
-      "timeFrom": "1h",
-      "hideTimeOverride": true
+      ]
     },
     {
-      "id": 22,
-      "type": "stat",
-      "title": "Cost Month-to-Date",
-      "description": "Cumulative USD cost since the start of the current calendar month, per cloud-side provider (hermes excluded). Same now/M time override and range-query-reduced-to-last-point pattern as the token Month-to-Date tile. Filtered by the Provider / Model dropdowns (cost series carry no kind label, so Token kind does not apply). Month boundary is exact: the offset side is evaluated with the @ modifier at ${__from:date:seconds} (the panel's now/M range start = local month start), not `offset $__range` -- on a step grid the offset form landed the boundary inside the previous month's last day (verified live: it counted Aug 31) and the day-aligned grid excluded today. Hourly steps keep the last point, and the sparkline, current.",
-      "timeFrom": "now/M",
-      "interval": "1h",
+      "id": 6,
+      "type": "row",
+      "title": "Local GPU & Inference",
+      "collapsed": false,
       "gridPos": {
-        "h": 9,
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "panels": []
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "Serving",
+      "description": "Which engine and model the inference server on the GPU box is running right now (vLLM, SGLang or llama.cpp; llama.cpp exposes no model label). Offline = no engine metrics in the last 2 minutes.",
+      "gridPos": {
+        "h": 4,
         "w": 6,
-        "x": 18,
-        "y": 35
+        "x": 0,
+        "y": 55
       },
       "datasource": {
         "type": "prometheus",
@@ -1370,21 +2303,69 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "#898781"
           },
-          "unit": "currencyUSD",
+          "unit": "none",
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "green",
                 "value": null
               }
             ]
           },
-          "decimals": 2
+          "noValue": "Offline"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "reduceOptions": {
@@ -1395,10 +2376,16 @@
           "values": false
         },
         "orientation": "auto",
+        "textMode": "name",
+        "wideLayout": true,
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
-        "textMode": "value_and_name"
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
       },
       "targets": [
         {
@@ -1406,38 +2393,46 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum by (provider)(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d]) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d])*0)))",
-          "legendFormat": "{{provider}}",
-          "instant": false,
-          "range": true,
+          "expr": "max by (model_name)(last_over_time(vllm:num_requests_running[2m]))",
+          "legendFormat": "vLLM · {{model_name}}",
+          "instant": true,
+          "range": false,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max by (model_name)(last_over_time(sglang:num_running_reqs[2m]))",
+          "legendFormat": "SGLang · {{model_name}}",
+          "instant": true,
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(last_over_time(llamacpp:requests_processing[2m]))",
+          "legendFormat": "llama.cpp",
+          "instant": true,
+          "range": false,
+          "refId": "C"
         }
-      ],
-      "hideTimeOverride": true
+      ]
     },
     {
-      "id": 14,
-      "type": "row",
-      "title": "Totals & Health",
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 44
-      },
-      "panels": []
-    },
-    {
-      "id": 15,
+      "id": 25,
       "type": "stat",
-      "title": "Local vs Cloud Output (24h)",
-      "description": "Comparable output-token totals for the last 24 hours: server-side local generation versus client-side cloud output, plus local output share. Hermes is excluded from cloud totals to prevent double-counting its mixed routing view. Uses two-point counter subtraction rather than increase().",
+      "title": "Inference Engine",
+      "description": "Live load and cache state of the resident engine: requests running and queued, KV-cache occupancy (vLLM kv_cache_usage_perc / SGLang token_usage), prefix-cache hit rate (cached prompt tokens / prompt tokens) and completed requests -- the last two over the dashboard time range.",
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 45
+        "h": 4,
+        "w": 12,
+        "x": 6,
+        "y": 55
       },
       "datasource": {
         "type": "prometheus",
@@ -1446,30 +2441,181 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "fixed",
+            "fixedColor": "text"
           },
-          "unit": "short",
-          "noValue": "N/A",
+          "unit": "none",
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "blue",
+                "color": "green",
                 "value": null
               }
             ]
-          }
+          },
+          "decimals": 0,
+          "noValue": "–"
         },
         "overrides": [
           {
             "matcher": {
-              "id": "byName",
-              "options": "local output share"
+              "id": "byFrameRefID",
+              "options": "C"
             },
             "properties": [
               {
                 "id": "unit",
-                "value": "percent"
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(last_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs|llamacpp:requests_processing\"}[1m]) keep_metric_names)",
+          "legendFormat": "Running",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(last_over_time({__name__=~\"vllm:num_requests_waiting|sglang:num_queue_reqs|llamacpp:requests_deferred\"}[1m]) keep_metric_names)",
+          "legendFormat": "Queued",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(last_over_time({__name__=~\"vllm:kv_cache_usage_perc|sglang:token_usage\"}[1m]) keep_metric_names)",
+          "legendFormat": "KV cache",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(increase({__name__=~\"vllm:prefix_cache_hits_total|sglang:cached_tokens_total|llamacpp:prompt_tokens_cached_total\"}[$__range]) keep_metric_names) / sum(increase({__name__=~\"vllm:prefix_cache_queries_total|sglang:prompt_tokens_total|llamacpp:prompt_tokens_total\"}[$__range]) keep_metric_names)",
+          "legendFormat": "Prefix cache hits",
+          "instant": false,
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(increase({__name__=~\"vllm:e2e_request_latency_seconds_count|sglang:e2e_request_latency_seconds_count\"}[$__range]) keep_metric_names)",
+          "legendFormat": "Requests",
+          "instant": false,
+          "range": true,
+          "refId": "E"
+        }
+      ]
+    },
+    {
+      "id": 15,
+      "type": "stat",
+      "title": "Local vs Cloud Output (Today)",
+      "description": "Output tokens since local midnight: generated on the local GPU (any engine) versus returned by cloud providers (client-side, hermes excluded), and the local share. Cloud side uses the @-anchored day subtraction, not a rolling 24h window -- on day-granular counters a 1d offset from 'now' counted yesterday AND today.",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 55
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "short",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1,
+          "noValue": "0"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
               },
               {
                 "id": "decimals",
@@ -1488,10 +2634,16 @@
           "values": false
         },
         "orientation": "auto",
-        "colorMode": "value",
-        "graphMode": "area",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "colorMode": "none",
+        "graphMode": "none",
         "justifyMode": "auto",
-        "textMode": "value_and_name"
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 22,
+          "titleSize": 12
+        }
       },
       "targets": [
         {
@@ -1499,19 +2651,8 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d])*0)))",
-          "legendFormat": "cloud output",
-          "instant": false,
-          "range": true,
-          "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "expr": "(sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0)",
-          "legendFormat": "local output",
+          "expr": "sum(increase({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\"}[$__range]) keep_metric_names)",
+          "legendFormat": "Local",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -1521,26 +2662,179 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "100 * ((sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0)) / (((sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0))) or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0)))*0) + (sum(max_over_time(llamacpp_tokens_predicted_total[400d]) - (max_over_time(llamacpp_tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp_tokens_predicted_total[400d])*0))) or sum(max_over_time(sglang:generation_tokens_total[400d]) - (max_over_time(sglang:generation_tokens_total[400d] offset 1d) or (max_over_time(sglang:generation_tokens_total[400d])*0)))*0 or sum(max_over_time(llamacpp:tokens_predicted_total[400d]) - (max_over_time(llamacpp:tokens_predicted_total[400d] offset 1d) or (max_over_time(llamacpp:tokens_predicted_total[400d])*0)))*0)) + (sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d]) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d])*0)))))",
-          "legendFormat": "local output share",
+          "expr": "sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] offset -$__interval) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] offset -$__interval)*0)))",
+          "legendFormat": "Cloud",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum(increase({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\"}[$__range]) keep_metric_names)) / ((sum(increase({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\"}[$__range]) keep_metric_names)) + (sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] offset -$__interval) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",kind=\"output\"}[400d] offset -$__interval)*0)))))",
+          "legendFormat": "Local share",
           "instant": false,
           "range": true,
           "refId": "C"
         }
+      ],
+      "timeFrom": "now/d",
+      "hideTimeOverride": true,
+      "interval": "5m"
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "GPU Power",
+      "description": "Board power draw on the GPU box against its enforced power limit (dashed). The axis keeps the whole power budget in view, so idle reads as idle.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 59
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#199e70"
+          },
+          "unit": "watt",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 22,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "limit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#898781"
+                }
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    6,
+                    6
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(nvidia_smi_power_draw_watts)",
+          "legendFormat": "draw",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(nvidia_smi_enforced_power_limit_watts)",
+          "legendFormat": "limit",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
       ]
     },
     {
-      "id": 16,
+      "id": 5,
       "type": "timeseries",
-      "title": "Hermes Client View (30d)",
-      "description": "Client-side view. Daily token deltas by Hermes model/profile, as reported by tokscale's client-side view of Hermes activity (mixes local-served and cloud-routed-through-Hermes traffic). Deliberately never summed into any cross-provider total on this dashboard -- see the anti-double-count rule. Same robust subtraction pattern as the other day-granular panels, not increase(). Rendered as stacked daily bars: the data is sparse day-granular deltas, which as overlapping lines read as a tangle of spikes over empty space.",
-      "timeFrom": "30d",
-      "interval": "1d",
+      "title": "GPU Utilization & VRAM",
+      "description": "SM utilization and VRAM occupancy, both as a share of capacity on one 0-100% axis (VRAM sits near the engine's reservation, e.g. vLLM gpu_memory_utilization, whenever a model is loaded).",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 45
+        "y": 59
       },
       "datasource": {
         "type": "prometheus",
@@ -1551,37 +2845,110 @@
           "color": {
             "mode": "palette-classic"
           },
-          "unit": "short",
-          "mappings": [],
+          "unit": "percentunit",
           "custom": {
-            "drawStyle": "bars",
-            "lineWidth": 1,
-            "fillOpacity": 100,
-            "pointSize": 5,
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
             "showPoints": "never",
+            "pointSize": 5,
             "spanNulls": false,
+            "insertNulls": false,
             "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
             "scaleDistribution": {
               "type": "linear"
             },
             "stacking": {
-              "mode": "normal",
+              "mode": "none",
               "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
             }
-          }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0,
+          "max": 1
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "utilization"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "VRAM"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "VRAM"
+            },
+            "properties": [
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
-          "calcs": [],
+          "showLegend": true,
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "calcs": []
         },
         "tooltip": {
           "mode": "multi",
-          "sort": "desc"
+          "sort": "none",
+          "hideZeros": false
         }
       },
       "targets": [
@@ -1590,8 +2957,311 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "sum by (model)(max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d]) - (max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d] offset 1d) or (max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d])*0)))",
-          "legendFormat": "{{model}}",
+          "expr": "max(nvidia_smi_utilization_gpu_ratio)",
+          "legendFormat": "utilization",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes)",
+          "legendFormat": "VRAM",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "GPU Vitals",
+      "description": "Energy since local midnight plus the latest die temperature, fan duty, graphics clock and VRAM in use on the GPU box (panel pinned to now/d). Energy is MetricsQL integrate() over the actual power samples, in kWh -- deliberately NOT avg_over_time(...) * $__range_s, which extrapolates the sampled average across unsampled hours and over-reported ~3.4x on a partial-coverage day (drifting DOWNWARD as idle samples accumulated); caught 2026-08-29 against a raw /api/v1/export trapezoid ground truth (integrate() matched within 0.25%). Range queries reduced to their last value.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 59
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatth"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "celsius"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "hertz"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "E"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "bytes"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 24,
+          "titleSize": 12
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "integrate(max(nvidia_smi_power_draw_watts)[$__range]) / 3600 / 1000",
+          "legendFormat": "Energy today",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(nvidia_smi_temperature_gpu)",
+          "legendFormat": "Temperature",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(nvidia_smi_fan_speed_ratio)",
+          "legendFormat": "Fan",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(nvidia_smi_clocks_current_graphics_clock_hz)",
+          "legendFormat": "Graphics clock",
+          "instant": false,
+          "range": true,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(nvidia_smi_memory_used_bytes)",
+          "legendFormat": "VRAM in use",
+          "instant": false,
+          "range": true,
+          "refId": "E"
+        }
+      ],
+      "timeFrom": "now/d",
+      "hideTimeOverride": true
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Generation Throughput",
+      "description": "Decode tokens per second across whichever engine is resident (one __name__ regex over vLLM, SGLang and both llama.cpp spellings; keep_metric_names prevents duplicate-series collisions). $__rate_interval widens with the step so long ranges average instead of aliasing.",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          },
+          "unit": "suffix: tok/s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(rate({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\"}[$__rate_interval]) keep_metric_names)",
+          "legendFormat": "generation",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -1599,15 +3269,508 @@
       ]
     },
     {
-      "id": 17,
-      "type": "stat",
-      "title": "Collector Lanes",
-      "description": "Latest status per known collector lane. UP means a successful sample in the last 20 minutes. NOT UP means the latest cycle failed, the lane is unconfigured, or no recent sample exists; a 30-day fallback keeps stale lane labels visible.",
+      "id": 28,
+      "type": "timeseries",
+      "title": "Prompt Throughput",
+      "description": "Prefill (prompt) tokens per second across engines. Split from generation on purpose: prefill runs 10-30x faster than decode and would flatten it on a shared axis.",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 0,
+        "y": 71
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#d55181"
+          },
+          "unit": "suffix: tok/s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(rate({__name__=~\"vllm:prompt_tokens_total|sglang:prompt_tokens_total|llamacpp:prompt_tokens_total|llamacpp_prompt_tokens_total\"}[$__rate_interval]) keep_metric_names)",
+          "legendFormat": "prompt",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Latency (p50 / p95)",
+      "description": "Time to first token and end-to-end request latency from the engine's own histograms (vLLM and SGLang expose both; llama.cpp has no latency histogram). Gaps mean no requests in that window.",
       "gridPos": {
         "h": 8,
-        "w": 4,
+        "w": 12,
+        "x": 12,
+        "y": 67
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TTFT p50"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TTFT p95"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "E2E p50"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "E2E p95"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "TTFT p95"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "E2E p95"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le)(rate({__name__=~\"vllm:time_to_first_token_seconds_bucket|sglang:time_to_first_token_seconds_bucket\"}[$__rate_interval]) keep_metric_names))",
+          "legendFormat": "TTFT p50",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le)(rate({__name__=~\"vllm:time_to_first_token_seconds_bucket|sglang:time_to_first_token_seconds_bucket\"}[$__rate_interval]) keep_metric_names))",
+          "legendFormat": "TTFT p95",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "histogram_quantile(0.5, sum by (le)(rate({__name__=~\"vllm:e2e_request_latency_seconds_bucket|sglang:e2e_request_latency_seconds_bucket\"}[$__rate_interval]) keep_metric_names))",
+          "legendFormat": "E2E p50",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "histogram_quantile(0.95, sum by (le)(rate({__name__=~\"vllm:e2e_request_latency_seconds_bucket|sglang:e2e_request_latency_seconds_bucket\"}[$__rate_interval]) keep_metric_names))",
+          "legendFormat": "E2E p95",
+          "instant": false,
+          "range": true,
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Pipeline & Hermes",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 75
+      },
+      "panels": []
+    },
+    {
+      "id": 26,
+      "type": "state-timeline",
+      "title": "Estate Timeline",
+      "description": "History of every moving part over the dashboard range: which inference engine was resident on the GPU box, whether the LLM server and GPU exporter answered their scrapes (worst state per step), and whether each collector lane succeeded (a push every 10 minutes; 20-minute window). Empty = no data at all -- the box or collector was off.",
+      "gridPos": {
+        "h": 7,
+        "w": 16,
+        "x": 0,
+        "y": 76
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "interval": "1m",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "down",
+                  "color": "#d03b3b",
+                  "index": 0
+                },
+                "1": {
+                  "text": "up",
+                  "color": "#0ca30c",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#898781",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 55,
+            "insertNulls": false,
+            "spanNulls": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Inference engine"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "1": {
+                        "text": "llama.cpp",
+                        "color": "#c98500",
+                        "index": 0
+                      },
+                      "2": {
+                        "text": "SGLang",
+                        "color": "#d55181",
+                        "index": 1
+                      },
+                      "3": {
+                        "text": "vLLM",
+                        "color": "#3987e5",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "auto",
+        "alignValue": "left",
+        "rowHeight": 0.78,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(max(max_over_time(vllm:num_requests_running[$__interval])) * 0 + 3) or (max(max_over_time(sglang:num_running_reqs[$__interval])) * 0 + 2) or (max(max_over_time(llamacpp:requests_processing[$__interval])) * 0 + 1)",
+          "legendFormat": "Inference engine",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "min(min_over_time(up{job=\"llm\"}[$__interval]))",
+          "legendFormat": "LLM server",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "min(min_over_time(up{job=\"gpu\"}[$__interval]))",
+          "legendFormat": "GPU exporter",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max by (lane)(last_over_time(aiobs_lane_up[20m]))",
+          "legendFormat": "{{lane}} lane",
+          "instant": false,
+          "range": true,
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "table",
+      "title": "Collector Lanes",
+      "description": "Current state of each data path. Status: a collector lane is up when it succeeded in the last 20 minutes; a scrape is up when the last scrape in 2 minutes answered (a signal seen in the last 30 days but silent now reads down). Last seen: time since the lane's last success (aiobs_lane_last_success_timestamp) or since the last sample actually arrived (tlast_over_time) -- green under 15 minutes, amber under an hour, red beyond. Health gauges are wrapped in last_over_time because a bare instant selector's ~5-minute staleness lookback is shorter than the collector's 600 s push cadence.",
+      "gridPos": {
+        "h": 7,
+        "w": 8,
         "x": 16,
-        "y": 45
+        "y": 76
       },
       "datasource": {
         "type": "prometheus",
@@ -1619,74 +3782,208 @@
             "mode": "thresholds"
           },
           "unit": "none",
-          "noValue": "NO LANE DATA",
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "NOT UP"
-                },
-                "1": {
-                  "text": "UP"
-                }
-              }
-            }
-          ],
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false,
+            "filterable": false
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "text",
                 "value": null
+              }
+            ]
+          },
+          "mappings": []
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Signal"
+            },
+            "properties": [
+              {
+                "id": "custom.minWidth",
+                "value": 140
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 90
               },
               {
-                "color": "green",
-                "value": 1
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "● DOWN",
+                        "color": "#d03b3b",
+                        "index": 0
+                      },
+                      "1": {
+                        "text": "● UP",
+                        "color": "#0ca30c",
+                        "index": 1
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Last seen"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "custom.align",
+                "value": "right"
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#0ca30c",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 900
+                    },
+                    {
+                      "color": "#d03b3b",
+                      "value": 3600
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
       "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
+        "showHeader": true,
+        "cellHeight": "md",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
           ],
-          "fields": "",
-          "values": false
-        },
-        "orientation": "horizontal",
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "value_and_name"
+          "countRows": false,
+          "fields": ""
+        }
       },
+      "transformations": [
+        {
+          "id": "merge",
+          "options": {}
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true
+            },
+            "indexByName": {
+              "signal": 0,
+              "Value #A": 1,
+              "Value #B": 2
+            },
+            "renameByName": {
+              "signal": "Signal",
+              "Value #A": "Status",
+              "Value #B": "Last seen"
+            }
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Signal",
+                "desc": false
+              }
+            ]
+          }
+        }
+      ],
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "last_over_time(aiobs_lane_up[20m]) or (last_over_time(aiobs_lane_up[30d]) * 0)",
-          "legendFormat": "{{lane}}",
+          "expr": "max by (signal)(label_replace(last_over_time(aiobs_lane_up[20m]) or (last_over_time(aiobs_lane_up[30d]) * 0), \"signal\", \"$1 lane\", \"lane\", \"(.*)\")) or max by (signal)(label_replace(label_replace(last_over_time(up{job=~\"gpu|llm\"}[2m]) or (last_over_time(up{job=~\"gpu|llm\"}[30d]) * 0), \"signal\", \"GPU exporter\", \"job\", \"gpu\"), \"signal\", \"LLM server\", \"job\", \"llm\"))",
+          "legendFormat": "__auto",
           "instant": true,
           "range": false,
-          "refId": "A"
+          "refId": "A",
+          "format": "table"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max by (signal)(label_replace(time() - last_over_time(aiobs_lane_last_success_timestamp[30d]), \"signal\", \"$1 lane\", \"lane\", \"(.*)\")) or label_set(time() - max(tlast_over_time(nvidia_smi_power_draw_watts[30d])), \"signal\", \"GPU exporter\") or label_set(time() - max(tlast_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs|llamacpp:requests_processing\"}[30d])), \"signal\", \"LLM server\")",
+          "legendFormat": "__auto",
+          "instant": true,
+          "range": false,
+          "refId": "B",
+          "format": "table"
         }
       ]
     },
     {
-      "id": 18,
-      "type": "stat",
-      "title": "Collector Freshness",
-      "description": "Elapsed time since each lane last succeeded. Green is under 15 minutes, yellow is 15-60 minutes, and red is over one hour. A 30-day lookback keeps stopped collectors visible; known lanes that have never succeeded are shown explicitly as NEVER.",
+      "id": 16,
+      "type": "timeseries",
+      "title": "Hermes Client View (30d)",
+      "description": "Daily tokens by Hermes model/profile as tokscale sees Hermes on the client side -- a mix of local-served and cloud-routed traffic, so it is never summed into any cross-provider total here (anti-double-count rule). One bar per local day, today last (same forward-looking two-point subtraction as the cloud panels, not increase()).",
       "gridPos": {
         "h": 8,
-        "w": 4,
-        "x": 20,
-        "y": 45
+        "w": 24,
+        "x": 0,
+        "y": 83
       },
       "datasource": {
         "type": "prometheus",
@@ -1695,35 +3992,49 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "thresholds"
+            "mode": "palette-classic"
           },
-          "unit": "dtdurations",
-          "noValue": "NO LANE DATA",
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "-1": {
-                  "color": "red",
-                  "text": "NEVER"
-                }
-              }
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 0,
+            "fillOpacity": 88,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
             }
-          ],
+          },
+          "mappings": [],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "yellow",
-                "value": 900
-              },
-              {
-                "color": "red",
-                "value": 3600
               }
             ]
           }
@@ -1731,18 +4042,22 @@
         "overrides": []
       },
       "options": {
-        "reduceOptions": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "right",
           "calcs": [
-            "lastNotNull"
+            "sum"
           ],
-          "fields": "",
-          "values": false
+          "sortBy": "Total",
+          "sortDesc": true,
+          "width": 350
         },
-        "orientation": "horizontal",
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "textMode": "value_and_name"
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc",
+          "hideZeros": true
+        }
       },
       "targets": [
         {
@@ -1750,13 +4065,16 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(time() - last_over_time(aiobs_lane_last_success_timestamp[30d])) or (last_over_time(aiobs_lane_up[30d]) * 0 - 1)",
-          "legendFormat": "{{lane}}",
-          "instant": true,
-          "range": false,
+          "expr": "topk_max(12, sum by (model)(max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d] offset -1d) - (max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d]) or (max_over_time(aiobs_tokens_total{provider=\"hermes\",origin=\"client\"}[400d] offset -1d)*0))) > 0)",
+          "legendFormat": "{{model}}",
+          "instant": false,
+          "range": true,
           "refId": "A"
         }
-      ]
+      ],
+      "timeFrom": "30d",
+      "hideTimeOverride": true,
+      "interval": "1d"
     }
   ]
 }

@@ -8,7 +8,16 @@ regression protection as the collector. Checks:
 - estate.json: no two top-level panels overlap on the grid
 - estate.json: the pushed cumulative counters (`aiobs_tokens_total`,
   `aiobs_cost_usd_total`) are never read through `increase()` -- verified
-  unreliable on this day-granular data (README, "Extending the dashboards")
+  unreliable on this day-granular data (README, "Extending the dashboards").
+  increase() on the GPU box's scraped counters is fine, even in the same
+  expression; the check looks at what each increase() call actually wraps
+- estate.json: daily counter bars look FORWARD one day (`offset -1d`) so the
+  bar stamped at local midnight D carries D's usage and today is the last
+  bar -- the backward form put every bar one day late (verified 2026-09-27)
+- estate.json: month-to-date counter panels anchor the month start with
+  `@ ${__from:date:seconds}` and look ahead one step (`offset -$__interval`)
+  so the value includes the newest push whatever step Grafana picks
+- estate.json: each provider wears one colour everywhere it is overridden
 - estate.json: every `$var` a query references is a defined template
   variable (or a Grafana built-in), so a renamed variable can't silently
   blank a panel
@@ -78,6 +87,19 @@ def _variables(dash: dict) -> dict:
     return {v["name"]: v for v in dash.get("templating", {}).get("list", [])}
 
 
+def _call_args(expr: str, func: str):
+    """Yield the argument text of every `func(...)` call in expr, balancing parentheses."""
+    token = f"{func}("
+    i = 0
+    while (j := expr.find(token, i)) >= 0:
+        k, depth = j + len(token), 1
+        while k < len(expr) and depth:
+            depth += {"(": 1, ")": -1}.get(expr[k], 0)
+            k += 1
+        yield expr[j + len(token) : k - 1]
+        i = k
+
+
 class TestAllDashboards(unittest.TestCase):
     def test_every_dashboard_parses_with_expected_uid(self):
         found = {
@@ -113,15 +135,70 @@ class TestEstateDashboard(unittest.TestCase):
     def test_pushed_counters_never_read_through_increase(self):
         for panel, expr in _exprs(self.dash):
             if any(m in expr for m in COUNTER_METRICS):
-                self.assertNotIn(
-                    "increase(", expr, f"panel {panel['id']} ({panel.get('title')}) uses increase()"
-                )
+                for arg in _call_args(expr, "increase"):
+                    for metric in COUNTER_METRICS:
+                        self.assertNotIn(
+                            metric,
+                            arg,
+                            f"panel {panel['id']} ({panel.get('title')}) reads {metric} through increase()",
+                        )
                 self.assertIn(
                     "max_over_time(",
                     expr,
                     f"panel {panel['id']} ({panel.get('title')}) must use the two-point "
                     "max_over_time subtraction",
                 )
+
+    def test_daily_counter_bars_look_forward(self):
+        for panel in _walk(self.dash["panels"]):
+            if panel.get("interval") != "1d":
+                continue
+            for target in panel.get("targets", []):
+                expr = target.get("expr", "")
+                if any(m in expr for m in COUNTER_METRICS):
+                    self.assertIn(
+                        "offset -1d",
+                        expr,
+                        f"panel {panel['id']} ({panel.get('title')}): daily counter bars must look forward "
+                        "(offset -1d) so the bar at local midnight D is D's usage",
+                    )
+                    self.assertNotRegex(
+                        expr,
+                        r"offset 1d\b",
+                        f"panel {panel['id']} ({panel.get('title')}): backward offset 1d puts every bar a day late",
+                    )
+
+    def test_month_to_date_anchors_and_looks_ahead(self):
+        for panel in _walk(self.dash["panels"]):
+            if panel.get("timeFrom") != "now/M":
+                continue
+            for target in panel.get("targets", []):
+                expr = target.get("expr", "")
+                if any(m in expr for m in COUNTER_METRICS):
+                    self.assertIn("@ ${__from:date:seconds}", expr, f"panel {panel['id']}: month start via @")
+                    self.assertIn(
+                        "offset -$__interval",
+                        expr,
+                        f"panel {panel['id']}: now-side must look ahead one step or the value lags a step",
+                    )
+
+    def test_each_provider_has_one_colour(self):
+        seen = {}
+        for panel in _walk(self.dash["panels"]):
+            for ov in panel.get("fieldConfig", {}).get("overrides", []):
+                matcher = ov.get("matcher", {})
+                name = matcher.get("options")
+                if matcher.get("id") == "byRegexp" and isinstance(name, str):
+                    m = re.fullmatch(r"\^([a-z0-9-]+) / \.\*", name)
+                    name = m.group(1) if m else None
+                elif matcher.get("id") != "byName":
+                    continue
+                for prop in ov.get("properties", []):
+                    if prop.get("id") == "color" and name:
+                        seen.setdefault(name, set()).add(prop["value"].get("fixedColor"))
+        for name in ("claude-code", "codex", "droid", "openrouter"):
+            self.assertIn(name, seen, f"no colour override for provider {name}")
+            self.assertEqual(len(seen[name]), 1, f"provider {name} wears several colours: {seen[name]}")
 
     def test_every_referenced_variable_is_defined(self):
         defined = set(_variables(self.dash)) | BUILTIN_VARS

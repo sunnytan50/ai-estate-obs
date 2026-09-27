@@ -122,6 +122,14 @@ Open `config/estate.env` in an editor and work through the steps below in order 
 
 Three dropdowns — **Provider**, **Model**, **Token kind** — filter every cloud panel, the headline spend and token cards included (All = unfiltered). Pick one model (say `gpt-6-astra`) to get its daily tokens, daily cost, month-to-date figures, and its row in the 30-day breakdown table (column headers sort and filter). The two per-model daily panels keep the 12 largest series via MetricsQL `topk_max()` (VictoriaMetrics-specific): Prometheus `topk()` re-ranks at every step, which makes stacked daily bars flicker. The dropdowns list whatever was used in the last 30 days regardless of the dashboard's time range — they use `query_result()` with a fixed lookback, not `label_values()`, which Grafana scopes to the visible range.
 
+**GPU Detail** (`/d/aiobs-gpu`, linked from the estate header) covers one GPU in depth:
+- power against its limit (average and peak per step), temperature against the thermal slowdown point, and daily energy
+- SM and memory-bus utilization, VRAM split into used / reserved / free, and clocks against their maxima
+- timelines of what limited the clocks and of the P-state, plus total time throttled
+- device identity, a link-and-limits table (power, VRAM, clocks and the PCIe link against their maxima), and exporter health
+
+Pick the box (by its `host` label) and the GPU at the top. It targets `nvidia_gpu_exporter`'s nvidia-smi build, the one `deploy-gpu-box.sh` installs. The NVML-only process / ECC / XID / MIG / PCIe-throughput metrics aren't produced by that build, so they aren't charted.
+
 ## Configuration reference
 
 Every variable lives in `config/estate.env` (copy of `config/estate.example.env` with real values). None of it is ever committed.

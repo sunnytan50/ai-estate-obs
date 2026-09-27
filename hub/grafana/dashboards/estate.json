@@ -2980,7 +2980,7 @@
       "id": 4,
       "type": "stat",
       "title": "GPU Vitals",
-      "description": "Energy since local midnight plus the latest die temperature, fan duty, graphics clock and VRAM in use on the GPU box (panel pinned to now/d). Energy is MetricsQL integrate() over the actual power samples, in kWh -- deliberately NOT avg_over_time(...) * $__range_s, which extrapolates the sampled average across unsampled hours and over-reported ~3.4x on a partial-coverage day (drifting DOWNWARD as idle samples accumulated); caught 2026-08-29 against a raw /api/v1/export trapezoid ground truth (integrate() matched within 0.25%). Range queries reduced to their last value.",
+      "description": "Energy since local midnight plus the latest die temperature, fan duty, graphics clock and VRAM in use on the GPU box (panel pinned to now/d). Energy is MetricsQL integrate() over the actual power samples, in kWh -- deliberately NOT avg_over_time(...) * $__range_s, which extrapolates the sampled average across unsampled hours and over-reported ~3.4x on a partial-coverage day (drifting DOWNWARD as idle samples accumulated); caught 2026-08-29 against a raw /api/v1/export trapezoid ground truth (integrate() matched within 0.25%). integrate() wraps the raw selector: integrate(max(m)[..]) is an implicit subquery that resamples and read 0.85% high (2026-09-27). Range queries reduced to their last value.",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -3118,7 +3118,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "integrate(max(nvidia_smi_power_draw_watts)[$__range]) / 3600 / 1000",
+          "expr": "sum(integrate(nvidia_smi_power_draw_watts[$__range])) / 3.6e6",
           "legendFormat": "Energy today",
           "instant": false,
           "range": true,

@@ -5,7 +5,15 @@ click-built panels"), and the repo is bi-session, so they get the same
 regression protection as the collector. Checks:
 
 - every dashboard parses, carries its expected uid, and has unique panel ids
-- estate.json: no two top-level panels overlap on the grid
+- every dashboard: no two top-level panels overlap on the grid, and every
+  `$var` a query references is a defined template variable (or a Grafana
+  built-in), so a renamed variable can't silently blank a panel
+- every dashboard: integrate() wraps a raw series selector -- integrate(max(m)[..])
+  is an implicit subquery that resamples the series (read 0.85% high against a
+  raw-sample trapezoid, 2026-09-27)
+- gpu-detail.json: queries select the box by its `host` label, never by
+  `instance` (the exporter listens on loopback, so every box shares one
+  instance value), and the daily energy bars look forward one day
 - estate.json: the pushed cumulative counters (`aiobs_tokens_total`,
   `aiobs_cost_usd_total`) are never read through `increase()` -- verified
   unreliable on this day-granular data (README, "Extending the dashboards").
@@ -18,9 +26,6 @@ regression protection as the collector. Checks:
   `@ ${__from:date:seconds}` and look ahead one step (`offset -$__interval`)
   so the value includes the newest push whatever step Grafana picks
 - estate.json: each provider wears one colour everywhere it is overridden
-- estate.json: every `$var` a query references is a defined template
-  variable (or a Grafana built-in), so a renamed variable can't silently
-  blank a panel
 - estate.json: the model-visibility variables (provider / model / kind)
   exist, are multi-select with an All option, and the `kind` filter is never
   applied to `aiobs_cost_usd_total` (cost series carry no `kind` label, so a
@@ -116,21 +121,43 @@ class TestAllDashboards(unittest.TestCase):
             self.assertEqual(dupes, [], f"{name}: duplicate panel ids {dupes}")
             self.assertNotIn(None, ids, f"{name}: a panel has no id")
 
+    def test_top_level_panels_do_not_overlap(self):
+        for name in EXPECTED_UIDS:
+            rects = []
+            for p in _load(name)["panels"]:
+                g = p["gridPos"]
+                rects.append((p["id"], g["x"], g["y"], g["x"] + g["w"], g["y"] + g["h"]))
+                self.assertLessEqual(g["x"] + g["w"], 24, f"{name}: panel {p['id']} runs off the 24-column grid")
+            for i, a in enumerate(rects):
+                for b in rects[i + 1 :]:
+                    overlap = a[1] < b[3] and b[1] < a[3] and a[2] < b[4] and b[2] < a[4]
+                    self.assertFalse(overlap, f"{name}: panels {a[0]} and {b[0]} overlap: {a} vs {b}")
+
+    def test_every_referenced_variable_is_defined(self):
+        for name in EXPECTED_UIDS:
+            dash = _load(name)
+            defined = set(_variables(dash)) | BUILTIN_VARS
+            for panel, expr in _exprs(dash):
+                for var in VAR_RE.findall(expr):
+                    self.assertIn(
+                        var, defined, f"{name}: panel {panel['id']} ({panel.get('title')}) references undefined ${var}"
+                    )
+
+    def test_integrate_wraps_a_raw_selector(self):
+        for name in EXPECTED_UIDS:
+            for panel, expr in _exprs(_load(name)):
+                for arg in _call_args(expr, "integrate"):
+                    self.assertNotRegex(
+                        arg,
+                        r"\)\s*\[",
+                        f"{name}: panel {panel['id']} ({panel.get('title')}) integrates a subquery -- "
+                        "aggregate outside: sum(integrate(m[..]))",
+                    )
+
 
 class TestEstateDashboard(unittest.TestCase):
     def setUp(self):
         self.dash = _load("estate.json")
-
-    def test_top_level_panels_do_not_overlap(self):
-        rects = []
-        for p in self.dash["panels"]:
-            g = p["gridPos"]
-            rects.append((p["id"], g["x"], g["y"], g["x"] + g["w"], g["y"] + g["h"]))
-            self.assertLessEqual(g["x"] + g["w"], 24, f"panel {p['id']} runs off the 24-column grid")
-        for i, a in enumerate(rects):
-            for b in rects[i + 1 :]:
-                overlap = a[1] < b[3] and b[1] < a[3] and a[2] < b[4] and b[2] < a[4]
-                self.assertFalse(overlap, f"panels {a[0]} and {b[0]} overlap: {a} vs {b}")
 
     def test_pushed_counters_never_read_through_increase(self):
         for panel, expr in _exprs(self.dash):
@@ -200,14 +227,6 @@ class TestEstateDashboard(unittest.TestCase):
             self.assertIn(name, seen, f"no colour override for provider {name}")
             self.assertEqual(len(seen[name]), 1, f"provider {name} wears several colours: {seen[name]}")
 
-    def test_every_referenced_variable_is_defined(self):
-        defined = set(_variables(self.dash)) | BUILTIN_VARS
-        for panel, expr in _exprs(self.dash):
-            for var in VAR_RE.findall(expr):
-                self.assertIn(
-                    var, defined, f"panel {panel['id']} ({panel.get('title')}) references undefined ${var}"
-                )
-
     def test_model_visibility_variables(self):
         variables = _variables(self.dash)
         for name in ("provider", "model", "kind"):
@@ -240,6 +259,32 @@ class TestEstateDashboard(unittest.TestCase):
             "Cost Month-to-Date",
         ):
             self.assertIn(title, titles)
+
+
+class TestGpuDashboard(unittest.TestCase):
+    def setUp(self):
+        self.dash = _load("gpu-detail.json")
+
+    def test_selects_by_host_not_loopback_instance(self):
+        for panel, expr in _exprs(self.dash):
+            self.assertNotIn(
+                "instance=",
+                expr,
+                f"panel {panel['id']} ({panel.get('title')}) filters on instance -- every box's exporter is 127.0.0.1",
+            )
+        for var in _variables(self.dash).values():
+            query = var.get("query", "")
+            query = query.get("query", "") if isinstance(query, dict) else query
+            self.assertNotIn("instance", query, f"variable {var['name']} keys on instance")
+
+    def test_daily_energy_looks_forward(self):
+        for panel in _walk(self.dash["panels"]):
+            if panel.get("interval") != "1d":
+                continue
+            for target in panel.get("targets", []):
+                expr = target.get("expr", "")
+                if "integrate(" in expr:
+                    self.assertIn("offset -1d", expr, f"panel {panel['id']}: daily energy must look forward")
 
 
 if __name__ == "__main__":

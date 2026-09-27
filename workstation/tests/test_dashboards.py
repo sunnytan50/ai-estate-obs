@@ -11,6 +11,11 @@ regression protection as the collector. Checks:
 - every dashboard: integrate() wraps a raw series selector -- integrate(max(m)[..])
   is an implicit subquery that resamples the series (read 0.85% high against a
   raw-sample trapezoid, 2026-09-27)
+- every dashboard: header cards are zoom-proof -- Grafana ignores a panel's
+  relative-time override once a drag-zoom makes the dashboard range absolute,
+  so a card either pairs its range query (gated with `and on()` to the live
+  panel range) with an instant twin pinned to now (`unless on()` + `@`), or is
+  instant and pinned to now() outright
 - every dashboard: a `[$__interval:<step>]` subquery runs on a panel whose
   min interval is that step (no empty windows, no 100k-points overrun)
 - every dashboard: integrate() windows are short (5m or one step) -- a
@@ -31,8 +36,9 @@ regression protection as the collector. Checks:
   bar stamped at local midnight D carries D's usage and today is the last
   bar -- the backward form put every bar one day late (verified 2026-09-27)
 - estate.json: month-to-date counter panels anchor the month start with
-  `@ ${__from:date:seconds}` and look ahead one step (`offset -$__interval`)
-  so the value includes the newest push whatever step Grafana picks
+  `@ ${__from:date:seconds}` and look ahead two steps (`offset -2i`) so the
+  value includes the newest push whatever step Grafana (and VictoriaMetrics'
+  UTC re-alignment of 50+-point queries) picks
 - estate.json: each provider wears one colour everywhere it is overridden
 - inference-detail.json: engine-agnostic -- any panel that reads SGLang also
   reads vLLM (the old dashboard was SGLang-only and went blank when the box
@@ -155,17 +161,42 @@ class TestAllDashboards(unittest.TestCase):
                     )
 
     def test_integrate_windows_are_short(self):
+        # range queries only: the instant path of integrate() does not carry a reading through a gap
         for name in EXPECTED_UIDS:
-            for panel, expr in _exprs(_load(name)):
-                for arg in _call_args(expr, "integrate"):
-                    windows = re.findall(r"\[([^\]]+)\]", arg)
-                    for window in windows:
-                        self.assertIn(
-                            window,
-                            ("5m", "$__interval"),
-                            f"{name}: panel {panel['id']} ({panel.get('title')}) integrates over [{window}] -- "
-                            "sum 5-minute windows instead: sum_over_time(integrate(m[5m])[<range>:5m])",
-                        )
+            for panel in _walk(_load(name)["panels"]):
+                for target in panel.get("targets", []):
+                    if target.get("instant") or not target.get("expr"):
+                        continue
+                    self._check_integrate_windows(name, panel, target["expr"])
+
+    def _check_integrate_windows(self, name, panel, expr):
+        if True:
+            for arg in _call_args(expr, "integrate"):
+                windows = re.findall(r"\[([^\]]+)\]", arg)
+                for window in windows:
+                    self.assertIn(
+                        window,
+                        ("5m", "$__interval"),
+                        f"{name}: panel {panel['id']} ({panel.get('title')}) integrates over [{window}] -- "
+                        "sum 5-minute windows instead: sum_over_time(integrate(m[5m])[<range>:5m])",
+                    )
+
+    def test_header_cards_are_zoom_proof(self):
+        for name in EXPECTED_UIDS:
+            for panel in _load(name)["panels"]:
+                if panel.get("type") != "stat" or panel["gridPos"]["y"] != 0:
+                    continue
+                targets = panel.get("targets", [])
+                ranged = [t for t in targets if not t.get("instant")]
+                where = f"{name}: card {panel['id']} ({(targets or [{}])[0].get('legendFormat')})"
+                if ranged:
+                    for t in ranged:
+                        self.assertIn("and on()", t["expr"], f"{where}: range query not gated to the live panel range")
+                    twins = [t for t in targets if t.get("instant") and "unless on()" in t["expr"] and "@" in t["expr"]]
+                    self.assertTrue(twins, f"{where}: no instant twin pinned to now for zoomed ranges")
+                else:
+                    for t in targets:
+                        self.assertIn("now()", t["expr"], f"{where}: instant card not pinned to now()")
 
     def test_fixed_step_subqueries_match_the_panel_step(self):
         # `[$__interval:<step>]` needs a panel min interval of <step>: shorter outer steps leave windows with no
@@ -217,6 +248,8 @@ class TestEstateDashboard(unittest.TestCase):
                 continue
             for target in panel.get("targets", []):
                 expr = target.get("expr", "")
+                if target.get("instant"):
+                    continue
                 if any(m in expr for m in COUNTER_METRICS):
                     self.assertIn(
                         "offset -1d",
@@ -236,12 +269,15 @@ class TestEstateDashboard(unittest.TestCase):
                 continue
             for target in panel.get("targets", []):
                 expr = target.get("expr", "")
+                if target.get("instant"):
+                    continue
                 if any(m in expr for m in COUNTER_METRICS):
                     self.assertIn("@ ${__from:date:seconds}", expr, f"panel {panel['id']}: month start via @")
                     self.assertIn(
-                        "offset -$__interval",
+                        "offset -2i",
                         expr,
-                        f"panel {panel['id']}: now-side must look ahead one step or the value lags a step",
+                        f"panel {panel['id']}: now-side must look ahead two steps (VictoriaMetrics re-aligns long "
+                        "queries to UTC step multiples, one step can fall short)",
                     )
 
     def test_each_provider_has_one_colour(self):

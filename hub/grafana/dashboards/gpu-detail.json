@@ -2,7 +2,7 @@
   "id": null,
   "uid": "aiobs-gpu",
   "title": "GPU Detail",
-  "description": "One GPU in depth: live power, utilization, memory, thermals, clocks and what limits them, daily energy, state history, device identity and the health of the metrics path. nvidia_gpu_exporter in nvidia-smi mode (the NVML-only process/ECC/XID/MIG/PCIe-throughput metrics are not produced by this build).",
+  "description": "One GPU in depth: live power, utilization, memory, thermals, clocks and what limits them, daily energy, state history, device identity and the health of the metrics path. nvidia_gpu_exporter in nvidia-smi mode (the NVML-only process/ECC/XID/MIG/PCIe-throughput metrics are not produced by this build). Header cards and status panels always show the present (a drag-zoom never changes them); charts follow the selected range.",
   "tags": [
     "aiobs",
     "nvidia"
@@ -191,11 +191,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(avg_over_time(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
+          "expr": "((max(avg_over_time(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Power",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((max(avg_over_time(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[1m]))) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Power",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -278,11 +289,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(avg_over_time(nvidia_smi_utilization_gpu_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
+          "expr": "((max(avg_over_time(nvidia_smi_utilization_gpu_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "GPU busy",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((max(avg_over_time(nvidia_smi_utilization_gpu_ratio{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[1m]))) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "GPU busy",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -364,11 +386,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(avg_over_time(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
+          "expr": "((max(avg_over_time(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "VRAM in use",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((max(avg_over_time(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[1m]))) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "VRAM in use",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -451,11 +484,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(max_over_time(nvidia_smi_temperature_gpu{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
+          "expr": "((max(max_over_time(nvidia_smi_temperature_gpu{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Temperature",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((max(max_over_time(nvidia_smi_temperature_gpu{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[1m]))) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Temperature",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -545,11 +589,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(min(min_over_time(nvidia_smi_temperature_gpu_tlimit{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
+          "expr": "((min(min_over_time(nvidia_smi_temperature_gpu_tlimit{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Headroom",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((min(min_over_time(nvidia_smi_temperature_gpu_tlimit{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[1m]))) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Headroom",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -631,11 +686,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(avg_over_time(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)",
+          "expr": "((max(avg_over_time(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval]))) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Graphics clock",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((max(avg_over_time(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[1m]))) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Graphics clock",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -705,11 +771,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "running_sum(sum(integrate(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval] offset -$__interval))) / 3.6e6",
+          "expr": "(running_sum(sum(integrate(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[$__interval] offset -$__interval))) / 3.6e6) and on() ((abs(vector(${__from:date:seconds}) - (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Energy today",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum(integrate(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[1d] offset -1d @ (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) / 3.6e6) unless on() ((abs(vector(${__from:date:seconds}) - (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Energy today",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "now/d",
@@ -831,7 +908,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_sw_power_cap{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 1, \"r\", \"1\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 2, \"r\", \"2\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_sw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 3, \"r\", \"3\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 4, \"r\", \"4\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 5, \"r\", \"5\") or label_set((max(max_over_time(nvidia_smi_gpu_recovery_action{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) > bool 0) * 6, \"r\", \"6\")) or on() vector(7)",
+          "expr": "(max(label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_sw_power_cap{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 1, \"r\", \"1\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 2, \"r\", \"2\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_sw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 3, \"r\", \"3\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_thermal_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 4, \"r\", \"4\") or label_set(max(max_over_time(nvidia_smi_clocks_event_reasons_hw_power_brake_slowdown{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) * 5, \"r\", \"5\") or label_set((max(max_over_time(nvidia_smi_gpu_recovery_action{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[2m])) > bool 0) * 6, \"r\", \"6\")) @ now()) or on() vector(7)",
           "legendFormat": "Clock limiter",
           "instant": true,
           "range": false,
@@ -2311,7 +2388,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max by (name, driver_version, cuda_version, vbios_version, compute_cap, driver_model_current, pci_bus_id)(topk_max(1, tlast_over_time(nvidia_smi_gpu_info{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[30d])))",
+          "expr": "max by (name, driver_version, cuda_version, vbios_version, compute_cap, driver_model_current, pci_bus_id)(topk_max(1, tlast_over_time(nvidia_smi_gpu_info{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[30d]))) @ now()",
           "legendFormat": "__auto",
           "instant": true,
           "range": false,
@@ -2507,7 +2584,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "label_set(round(round(max(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})), 0.1), \"item\", \"Power (W)\", \"o\", \"1\") or label_set(round(max(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1073741824, 0.1), \"item\", \"VRAM (GiB)\", \"o\", \"2\") or label_set(round(max(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6, 0.1), \"item\", \"Graphics clock (MHz)\", \"o\", \"3\") or label_set(round(max(nvidia_smi_clocks_current_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6, 0.1), \"item\", \"Memory clock (MHz)\", \"o\", \"4\") or label_set(round(max(nvidia_smi_pcie_link_gen_current{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"PCIe generation\", \"o\", \"5\") or label_set(round(max(nvidia_smi_pcie_link_width_current{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"PCIe lanes\", \"o\", \"6\")",
+          "expr": "(label_set(round(round(max(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})), 0.1), \"item\", \"Power (W)\", \"o\", \"1\") or label_set(round(max(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1073741824, 0.1), \"item\", \"VRAM (GiB)\", \"o\", \"2\") or label_set(round(max(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6, 0.1), \"item\", \"Graphics clock (MHz)\", \"o\", \"3\") or label_set(round(max(nvidia_smi_clocks_current_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6, 0.1), \"item\", \"Memory clock (MHz)\", \"o\", \"4\") or label_set(round(max(nvidia_smi_pcie_link_gen_current{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"PCIe generation\", \"o\", \"5\") or label_set(round(max(nvidia_smi_pcie_link_width_current{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"PCIe lanes\", \"o\", \"6\")) @ now()",
           "legendFormat": "__auto",
           "instant": true,
           "range": false,
@@ -2519,7 +2596,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "label_set(round(max(nvidia_smi_enforced_power_limit_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"Power (W)\", \"o\", \"1\") or label_set(round(max(nvidia_smi_memory_total_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1073741824, 0.1), \"item\", \"VRAM (GiB)\", \"o\", \"2\") or label_set(round(max(nvidia_smi_clocks_max_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6, 0.1), \"item\", \"Graphics clock (MHz)\", \"o\", \"3\") or label_set(round(max(nvidia_smi_clocks_max_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6, 0.1), \"item\", \"Memory clock (MHz)\", \"o\", \"4\") or label_set(round(max(nvidia_smi_pcie_link_gen_max{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"PCIe generation\", \"o\", \"5\") or label_set(round(max(nvidia_smi_pcie_link_width_max{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"PCIe lanes\", \"o\", \"6\")",
+          "expr": "(label_set(round(max(nvidia_smi_enforced_power_limit_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"Power (W)\", \"o\", \"1\") or label_set(round(max(nvidia_smi_memory_total_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1073741824, 0.1), \"item\", \"VRAM (GiB)\", \"o\", \"2\") or label_set(round(max(nvidia_smi_clocks_max_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6, 0.1), \"item\", \"Graphics clock (MHz)\", \"o\", \"3\") or label_set(round(max(nvidia_smi_clocks_max_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6, 0.1), \"item\", \"Memory clock (MHz)\", \"o\", \"4\") or label_set(round(max(nvidia_smi_pcie_link_gen_max{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"PCIe generation\", \"o\", \"5\") or label_set(round(max(nvidia_smi_pcie_link_width_max{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}), 0.1), \"item\", \"PCIe lanes\", \"o\", \"6\")) @ now()",
           "legendFormat": "__auto",
           "instant": true,
           "range": false,
@@ -2531,7 +2608,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "label_set((round(max(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}))) / (max(nvidia_smi_enforced_power_limit_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})), \"item\", \"Power (W)\", \"o\", \"1\") or label_set((max(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1073741824) / (max(nvidia_smi_memory_total_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1073741824), \"item\", \"VRAM (GiB)\", \"o\", \"2\") or label_set((max(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6) / (max(nvidia_smi_clocks_max_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6), \"item\", \"Graphics clock (MHz)\", \"o\", \"3\") or label_set((max(nvidia_smi_clocks_current_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6) / (max(nvidia_smi_clocks_max_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6), \"item\", \"Memory clock (MHz)\", \"o\", \"4\") or label_set((max(nvidia_smi_pcie_link_gen_current{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})) / (max(nvidia_smi_pcie_link_gen_max{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})), \"item\", \"PCIe generation\", \"o\", \"5\") or label_set((max(nvidia_smi_pcie_link_width_current{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})) / (max(nvidia_smi_pcie_link_width_max{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})), \"item\", \"PCIe lanes\", \"o\", \"6\")",
+          "expr": "(label_set((round(max(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}))) / (max(nvidia_smi_enforced_power_limit_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})), \"item\", \"Power (W)\", \"o\", \"1\") or label_set((max(nvidia_smi_memory_used_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1073741824) / (max(nvidia_smi_memory_total_bytes{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1073741824), \"item\", \"VRAM (GiB)\", \"o\", \"2\") or label_set((max(nvidia_smi_clocks_current_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6) / (max(nvidia_smi_clocks_max_graphics_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6), \"item\", \"Graphics clock (MHz)\", \"o\", \"3\") or label_set((max(nvidia_smi_clocks_current_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6) / (max(nvidia_smi_clocks_max_memory_clock_hz{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}) / 1e6), \"item\", \"Memory clock (MHz)\", \"o\", \"4\") or label_set((max(nvidia_smi_pcie_link_gen_current{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})) / (max(nvidia_smi_pcie_link_gen_max{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})), \"item\", \"PCIe generation\", \"o\", \"5\") or label_set((max(nvidia_smi_pcie_link_width_current{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})) / (max(nvidia_smi_pcie_link_width_max{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"})), \"item\", \"PCIe lanes\", \"o\", \"6\")) @ now()",
           "legendFormat": "__auto",
           "instant": true,
           "range": false,
@@ -2790,7 +2867,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(last_over_time(up{job=\"gpu\",host=~\"$host\"}[2m])) or on() vector(0)",
+          "expr": "(max(last_over_time(up{job=\"gpu\",host=~\"$host\"}[2m])) @ now()) or on() vector(0)",
           "legendFormat": "Scrape",
           "instant": true,
           "range": false,
@@ -2801,7 +2878,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(last_over_time(nvidia_smi_last_collect_success{job=\"gpu\",host=~\"$host\"}[2m])) or on() vector(0)",
+          "expr": "(max(last_over_time(nvidia_smi_last_collect_success{job=\"gpu\",host=~\"$host\"}[2m])) @ now()) or on() vector(0)",
           "legendFormat": "nvidia-smi",
           "instant": true,
           "range": false,
@@ -2812,7 +2889,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(last_over_time(nvidia_smi_last_collect_duration_seconds{job=\"gpu\",host=~\"$host\"}[2m]))",
+          "expr": "max(last_over_time(nvidia_smi_last_collect_duration_seconds{job=\"gpu\",host=~\"$host\"}[2m])) @ now()",
           "legendFormat": "Collect time",
           "instant": true,
           "range": false,
@@ -2834,7 +2911,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "time() - max(tlast_over_time(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[30d]))",
+          "expr": "now() - (max(tlast_over_time(nvidia_smi_power_draw_watts{job=\"gpu\",host=~\"$host\",uuid=~\"$gpu\"}[30d])) @ now())",
           "legendFormat": "Newest sample",
           "instant": true,
           "range": false,

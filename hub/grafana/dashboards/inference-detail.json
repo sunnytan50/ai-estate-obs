@@ -2,7 +2,7 @@
   "id": null,
   "uid": "aiobs-inference",
   "title": "Inference Detail",
-  "description": "The local inference server in depth, whichever engine is resident (vLLM, SGLang or llama.cpp): throughput, load, latency, KV and prefix cache, request shape and outcomes, engine residency and limits.",
+  "description": "The local inference server in depth, whichever engine is resident (vLLM, SGLang or llama.cpp): throughput, load, latency, KV and prefix cache, request shape and outcomes, engine residency and limits. Header cards and status panels always show the present (a drag-zoom never changes them); charts follow the selected range.",
   "tags": [
     "aiobs",
     "inference"
@@ -233,7 +233,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max by (model_name)(last_over_time(vllm:num_requests_running{job=\"llm\",host=~\"$host\"}[2m]))",
+          "expr": "max by (model_name)(last_over_time(vllm:num_requests_running{job=\"llm\",host=~\"$host\"}[2m])) @ now()",
           "legendFormat": "vLLM · {{model_name}}",
           "instant": true,
           "range": false,
@@ -244,7 +244,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max by (model_name)(last_over_time(sglang:num_running_reqs{job=\"llm\",host=~\"$host\"}[2m]))",
+          "expr": "max by (model_name)(last_over_time(sglang:num_running_reqs{job=\"llm\",host=~\"$host\"}[2m])) @ now()",
           "legendFormat": "SGLang · {{model_name}}",
           "instant": true,
           "range": false,
@@ -255,7 +255,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(last_over_time(llamacpp:requests_processing{job=\"llm\",host=~\"$host\"}[2m]))",
+          "expr": "max(last_over_time(llamacpp:requests_processing{job=\"llm\",host=~\"$host\"}[2m])) @ now()",
           "legendFormat": "llama.cpp",
           "instant": true,
           "range": false,
@@ -337,11 +337,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(sum(rate({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)",
+          "expr": "((sum(rate({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Generation",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((sum(rate({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1m]) keep_metric_names)) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Generation",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -423,11 +434,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(sum(max_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs|llamacpp:requests_processing\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)",
+          "expr": "((sum(max_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs|llamacpp:requests_processing\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Running",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((sum(max_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs|llamacpp:requests_processing\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1m]) keep_metric_names)) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Running",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -512,11 +534,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(sum(max_over_time({__name__=~\"vllm:num_requests_waiting|sglang:num_queue_reqs|llamacpp:requests_deferred\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)",
+          "expr": "((sum(max_over_time({__name__=~\"vllm:num_requests_waiting|sglang:num_queue_reqs|llamacpp:requests_deferred\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Queued",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((sum(max_over_time({__name__=~\"vllm:num_requests_waiting|sglang:num_queue_reqs|llamacpp:requests_deferred\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1m]) keep_metric_names)) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Queued",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -606,11 +639,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(max_over_time({__name__=~\"vllm:kv_cache_usage_perc|sglang:token_usage\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)",
+          "expr": "((max(max_over_time({__name__=~\"vllm:kv_cache_usage_perc|sglang:token_usage\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)) and on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "KV cache",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(((max(max_over_time({__name__=~\"vllm:kv_cache_usage_perc|sglang:token_usage\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1m]) keep_metric_names)) @ now()) or on() vector(-1)) unless on() ((abs(vector(${__to:date:seconds} - ${__from:date:seconds}) - 10800) < 120) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "KV cache",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "3h",
@@ -681,7 +725,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(increase({__name__=~\"vllm:time_to_first_token_seconds_bucket|sglang:time_to_first_token_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1h]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(increase({__name__=~\"vllm:time_to_first_token_seconds_bucket|sglang:time_to_first_token_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1h]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\")))) @ now()",
           "legendFormat": "TTFT p95 · 1h",
           "instant": true,
           "range": false,
@@ -752,11 +796,22 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "running_sum(sum(increase({__name__=~\"vllm:e2e_request_latency_seconds_count|sglang:e2e_request_latency_seconds_count\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval] offset -$__interval) keep_metric_names))",
+          "expr": "(running_sum(sum(increase({__name__=~\"vllm:e2e_request_latency_seconds_count|sglang:e2e_request_latency_seconds_count\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval] offset -$__interval) keep_metric_names))) and on() ((abs(vector(${__from:date:seconds}) - (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
           "legendFormat": "Requests today",
           "instant": false,
           "range": true,
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum(increase({__name__=~\"vllm:e2e_request_latency_seconds_count|sglang:e2e_request_latency_seconds_count\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1d] offset -1d @ (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) keep_metric_names)) unless on() ((abs(vector(${__from:date:seconds}) - (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
+          "legendFormat": "Requests today",
+          "instant": true,
+          "range": false,
+          "refId": "B"
         }
       ],
       "timeFrom": "now/d",
@@ -2557,7 +2612,7 @@
       "id": 17,
       "type": "stat",
       "title": "Engine Limits",
-      "description": "Capacity of the resident engine, evaluated now: KV-cache capacity in tokens (vLLM cache_config_info / SGLang max_total_num_tokens), full-context requests that fit at once (vLLM kv_cache_max_concurrency), context window (SGLang context_len / llama.cpp n_tokens_max), GPU memory share the engine claimed (vLLM gpu_memory_utilization), requests preempted over the range (vLLM), and speculative-decoding acceptance (SGLang spec_accept_rate / llama.cpp accepted / drafted). '–' = not exposed by the resident engine.",
+      "description": "Capacity of the resident engine, evaluated now: KV-cache capacity in tokens (vLLM cache_config_info / SGLang max_total_num_tokens), full-context requests that fit at once (vLLM kv_cache_max_concurrency), context window (SGLang context_len / llama.cpp n_tokens_max), GPU memory share the engine claimed (vLLM gpu_memory_utilization), requests preempted over the dashboard range (vLLM), and speculative-decoding acceptance (SGLang spec_accept_rate / llama.cpp accepted / drafted over the last hour). Everything but Preemptions is the present, whatever the dashboard range. '–' = not exposed by the resident engine.",
       "gridPos": {
         "h": 4,
         "w": 12,
@@ -2671,7 +2726,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"kv_cache_size_tokens\")) or max(last_over_time(sglang:max_total_num_tokens{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]))) or on() vector(-1)",
+          "expr": "((max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"kv_cache_size_tokens\")) or max(last_over_time(sglang:max_total_num_tokens{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]))) @ now()) or on() vector(-1)",
           "legendFormat": "KV capacity",
           "instant": true,
           "range": false,
@@ -2682,7 +2737,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"kv_cache_max_concurrency\")) or on() vector(-1)",
+          "expr": "(max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"kv_cache_max_concurrency\")) @ now()) or on() vector(-1)",
           "legendFormat": "Full-ctx slots",
           "instant": true,
           "range": false,
@@ -2693,7 +2748,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(last_over_time(sglang:context_len{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m])) or max(last_over_time(llamacpp:n_tokens_max{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]))) or on() vector(-1)",
+          "expr": "((max(last_over_time(sglang:context_len{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m])) or max(last_over_time(llamacpp:n_tokens_max{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]))) @ now()) or on() vector(-1)",
           "legendFormat": "Context",
           "instant": true,
           "range": false,
@@ -2704,7 +2759,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"gpu_memory_utilization\")) or on() vector(-1)",
+          "expr": "(max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"gpu_memory_utilization\")) @ now()) or on() vector(-1)",
           "legendFormat": "GPU mem",
           "instant": true,
           "range": false,
@@ -2726,7 +2781,7 @@
             "type": "prometheus",
             "uid": "vm"
           },
-          "expr": "(max(last_over_time(sglang:spec_accept_rate{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m])) or (sum(increase(llamacpp:spec_decode_num_accepted_tokens_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__range])) / sum(increase(llamacpp:spec_decode_num_draft_tokens_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__range])))) or on() vector(-1)",
+          "expr": "((max(last_over_time(sglang:spec_accept_rate{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m])) or (sum(increase(llamacpp:spec_decode_num_accepted_tokens_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1h])) / sum(increase(llamacpp:spec_decode_num_draft_tokens_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1h])))) @ now()) or on() vector(-1)",
           "legendFormat": "Spec accept",
           "instant": true,
           "range": false,

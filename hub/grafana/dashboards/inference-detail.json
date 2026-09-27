@@ -1,4 +1,114 @@
 {
+  "id": null,
+  "uid": "aiobs-inference",
+  "title": "Inference Detail",
+  "description": "The local inference server in depth, whichever engine is resident (vLLM, SGLang or llama.cpp): throughput, load, latency, KV and prefix cache, request shape and outcomes, engine residency and limits.",
+  "tags": [
+    "aiobs",
+    "inference"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "graphTooltip": 1,
+  "schemaVersion": 39,
+  "version": 2,
+  "refresh": "30s",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m"
+    ]
+  },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "AI Estate",
+      "tooltip": "Back to the estate overview",
+      "type": "link",
+      "url": "/d/aiobs-estate/ai-estate"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "GPU Detail",
+      "tooltip": "Open the GPU detail dashboard",
+      "type": "link",
+      "url": "/d/aiobs-gpu/gpu-detail"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "host",
+        "label": "Box",
+        "description": "Inference box, by the host label vmagent stamps on every sample (listed if seen in the last 30 days).",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "vm"
+        },
+        "definition": "query_result(count by (host)(last_over_time(up{job=\"llm\"}[30d])))",
+        "query": "query_result(count by (host)(last_over_time(up{job=\"llm\"}[30d])))",
+        "regex": "/host=\"([^\"]+)\"/",
+        "refresh": 1,
+        "sort": 1,
+        "includeAll": false,
+        "multi": false,
+        "current": {},
+        "options": [],
+        "hide": 0,
+        "skipUrlSync": false
+      },
+      {
+        "type": "query",
+        "name": "model",
+        "label": "Model",
+        "description": "Models served in the last 30 days (vLLM / SGLang model_name). llama.cpp exposes no model label, so it only shows under All; Serving and Engine Residency ignore this filter.",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "vm"
+        },
+        "definition": "query_result(count by (model_name)(last_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs\",job=\"llm\",host=~\"$host\"}[30d])))",
+        "query": "query_result(count by (model_name)(last_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs\",job=\"llm\",host=~\"$host\"}[30d])))",
+        "regex": "/model_name=\"([^\"]+)\"/",
+        "refresh": 1,
+        "sort": 1,
+        "includeAll": true,
+        "multi": true,
+        "allValue": ".*",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [],
+        "hide": 0,
+        "skipUrlSync": false
+      }
+    ]
+  },
   "annotations": {
     "list": [
       {
@@ -15,259 +125,155 @@
       }
     ]
   },
-  "editable": true,
-  "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
-  "id": null,
-  "links": [],
   "panels": [
     {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
+      "id": 101,
+      "type": "stat",
+      "title": "",
+      "description": "Which engine and model the inference server on the box is running right now, whatever the Model filter (llama.cpp exposes no model label). Offline = no engine metrics in the last 2 minutes.",
       "gridPos": {
-        "h": 8,
-        "w": 12,
+        "h": 4,
+        "w": 6,
         "x": 0,
         "y": 0
       },
-      "id": 14,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(sglang:e2e_request_latency_seconds_bucket[$__rate_interval])))\r\n",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "P99",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.9, sum by (le) (rate(sglang:e2e_request_latency_seconds_bucket[$__rate_interval])))\r\n",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "P90",
-          "range": true,
-          "refId": "B",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(sglang:e2e_request_latency_seconds_bucket[$__rate_interval])))\r\n",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "P50",
-          "range": true,
-          "refId": "C",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "avg(rate(sglang:e2e_request_latency_seconds_sum[$__rate_interval]) /  rate(sglang:e2e_request_latency_seconds_count[$__rate_interval]))\r\n",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "Avg",
-          "range": true,
-          "refId": "D",
-          "useBackend": false
-        }
-      ],
-      "title": "End-to-End Request Latency",
-      "type": "timeseries"
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "vm"
       },
       "fieldConfig": {
         "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          }
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "noValue": "Offline"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
       },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "name",
+        "wideLayout": false,
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 18
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max by (model_name)(last_over_time(vllm:num_requests_running{job=\"llm\",host=~\"$host\"}[2m]))",
+          "legendFormat": "vLLM · {{model_name}}",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max by (model_name)(last_over_time(sglang:num_running_reqs{job=\"llm\",host=~\"$host\"}[2m]))",
+          "legendFormat": "SGLang · {{model_name}}",
+          "instant": true,
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(last_over_time(llamacpp:requests_processing{job=\"llm\",host=~\"$host\"}[2m]))",
+          "legendFormat": "llama.cpp",
+          "instant": true,
+          "range": false,
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "stat",
+      "title": "",
+      "description": "Decode tokens per second, 1-minute rates over the last 3 hours (any engine). 'not serving' = no engine (for the selected model) reporting.",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
+        "h": 4,
+        "w": 3,
+        "x": 6,
         "y": 0
       },
-      "id": 17,
-      "maxDataPoints": 30,
-      "options": {
-        "calculate": false,
-        "calculation": {
-          "yBuckets": {
-            "scale": {
-              "type": "linear"
-            }
-          }
-        },
-        "cellGap": 1,
-        "cellValues": {},
-        "color": {
-          "exponent": 0.5,
-          "fill": "dark-orange",
-          "mode": "scheme",
-          "reverse": false,
-          "scale": "exponential",
-          "scheme": "Spectral",
-          "steps": 64
-        },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {
-          "le": 1E-9
-        },
-        "legend": {
-          "show": true
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "tooltip": {
-          "mode": "single",
-          "showColorScale": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "reverse": false,
-          "unit": "secs"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "sum(increase(sglang:e2e_request_latency_seconds_bucket{model_name=~\"$model_name\"}[$__rate_interval])) by (le)\r\n",
-          "format": "heatmap",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "{{le}}",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "End-to-End Request Latency(s) Heatmap",
-      "type": "heatmap"
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "vm"
@@ -275,449 +281,608 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
           },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
+          "unit": "suffix: tok/s",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "not serving",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
             }
-          },
-          "mappings": [],
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
+                "color": "green",
+                "value": null
               }
             ]
-          }
+          },
+          "decimals": 0,
+          "min": 0
         },
         "overrides": []
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 8
-      },
-      "id": 20,
       "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "vm"
           },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(sglang:time_to_first_token_seconds_bucket[$__rate_interval])))\r\n",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
+          "expr": "(sum(rate({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)",
+          "legendFormat": "Generation",
           "instant": false,
-          "legendFormat": "P99",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.9, sum by (le) (rate(sglang:time_to_first_token_seconds_bucket[$__rate_interval])))\r\n",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "P90",
-          "range": true,
-          "refId": "B",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "histogram_quantile(0.5, sum by (le) (rate(sglang:time_to_first_token_seconds_bucket[$__rate_interval])))\r\n",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "P50",
-          "range": true,
-          "refId": "C",
-          "useBackend": false
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "avg(rate(sglang:time_to_first_token_seconds_sum[$__rate_interval]) /  rate(sglang:time_to_first_token_seconds_count[$__rate_interval]))\r\n",
-          "fullMetaSearch": false,
-          "hide": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "Avg",
-          "range": true,
-          "refId": "D",
-          "useBackend": false
-        }
-      ],
-      "title": "Time-To-First-Token Latency",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "scaleDistribution": {
-              "type": "linear"
-            }
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
-      },
-      "id": 19,
-      "maxDataPoints": 30,
-      "options": {
-        "calculate": false,
-        "calculation": {
-          "xBuckets": {
-            "value": ""
-          },
-          "yBuckets": {
-            "mode": "size",
-            "scale": {
-              "type": "linear"
-            },
-            "value": ""
-          }
-        },
-        "cellGap": 1,
-        "color": {
-          "exponent": 0.5,
-          "fill": "dark-orange",
-          "mode": "scheme",
-          "reverse": false,
-          "scale": "exponential",
-          "scheme": "Spectral",
-          "steps": 64
-        },
-        "exemplars": {
-          "color": "rgba(255,0,255,0.7)"
-        },
-        "filterValues": {
-          "le": 1E-9
-        },
-        "legend": {
-          "show": true
-        },
-        "rowsFrame": {
-          "layout": "auto"
-        },
-        "tooltip": {
-          "mode": "single",
-          "showColorScale": true,
-          "yHistogram": false
-        },
-        "yAxis": {
-          "axisPlacement": "left",
-          "reverse": false
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "exemplar": false,
-          "expr": "sum by(le) (increase(sglang:time_to_first_token_seconds_bucket{model_name=~\"$model_name\"}[$__rate_interval]))",
-          "format": "heatmap",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "{{le}}",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Time-To-First-Token Seconds Heatmap",
-      "type": "heatmap"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 16
-      },
-      "id": 7,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "sglang:num_running_reqs",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Num Running Requests",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "vm"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green"
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 16
-      },
-      "id": 18,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "editorMode": "code",
-          "expr": "sglang:gen_throughput",
-          "instant": false,
-          "legendFormat": "{{instance}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Token Generation Throughput (Tokens / S)",
-      "type": "timeseries"
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
     },
     {
+      "id": 104,
+      "type": "stat",
+      "title": "",
+      "description": "Requests being processed, peak per minute over the last 3 hours.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          },
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "not serving",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum(max_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs|llamacpp:requests_processing\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)",
+          "legendFormat": "Running",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
+    },
+    {
+      "id": 105,
+      "type": "stat",
+      "title": "",
+      "description": "Requests waiting for a slot, peak per minute. Anything above 0 means the engine is at capacity (amber).",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "none",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "not serving",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 1
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum(max_over_time({__name__=~\"vllm:num_requests_waiting|sglang:num_queue_reqs|llamacpp:requests_deferred\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)",
+          "legendFormat": "Queued",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
+    },
+    {
+      "id": 106,
+      "type": "stat",
+      "title": "",
+      "description": "Share of the KV cache in use (vLLM kv_cache_usage_perc / SGLang token_usage), peak per minute. Amber from 90%, red from 98% -- a full cache preempts requests. '–' when no engine reports it (offline, or llama.cpp).",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 15,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percentunit",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "–",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 0.9
+              },
+              {
+                "color": "#d03b3b",
+                "value": 0.98
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(max(max_over_time({__name__=~\"vllm:kv_cache_usage_perc|sglang:token_usage\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)) or on() vector(-1)",
+          "legendFormat": "KV cache",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "3h",
+      "hideTimeOverride": true,
+      "interval": "1m",
+      "maxDataPoints": 180
+    },
+    {
+      "id": 107,
+      "type": "stat",
+      "title": "",
+      "description": "95th-percentile time to first token over the last hour, per engine histogram (vLLM / SGLang; llama.cpp exports none). 'no data' when nothing finished in the hour or llama.cpp is resident.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "s",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "noValue": "no data"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(increase({__name__=~\"vllm:time_to_first_token_seconds_bucket|sglang:time_to_first_token_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[1h]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "TTFT p95 · 1h",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 108,
+      "type": "stat",
+      "title": "",
+      "description": "Requests finished since local midnight (vLLM / SGLang request counters; llama.cpp exposes none, so its traffic is not counted): a running sum of 5-minute increases, each window one step ahead so the day starts at midnight and the last step reaches now.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 21,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          },
+          "unit": "none",
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "noValue": "–"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": false,
+        "colorMode": "none",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 26,
+          "titleSize": 13
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "running_sum(sum(increase({__name__=~\"vllm:e2e_request_latency_seconds_count|sglang:e2e_request_latency_seconds_count\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval] offset -$__interval) keep_metric_names))",
+          "legendFormat": "Requests today",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "timeFrom": "now/d",
+      "hideTimeOverride": true,
+      "interval": "5m"
+    },
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Throughput & Load",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "panels": []
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Generation",
+      "description": "Decode (generation) tokens per second across whichever engine is resident. $__rate_interval widens with the step so long ranges average instead of aliasing.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          },
+          "unit": "suffix: tok/s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(rate({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names)",
+          "legendFormat": "generation",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Prefill",
+      "description": "Prompt tokens per second, stacked: computed by the engine (real prefill work) and served from the prefix cache. The engines count differently -- vLLM and SGLang prompt totals include cache hits, llama.cpp's do not -- so each side is taken from its own counter (vLLM prompt_tokens_by_source local_compute / local_cache_hit, SGLang uncached / cached tokens, llama.cpp prompt / prompt_cached tokens). Counting cache hits as prefill overstated vLLM prefill about 5.7x.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 5
+      },
       "datasource": {
         "type": "prometheus",
         "uid": "vm"
@@ -727,37 +892,38 @@
           "color": {
             "mode": "palette-classic"
           },
+          "unit": "suffix: tok/s",
           "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 24,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
             }
           },
           "mappings": [],
@@ -765,60 +931,1240 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
-              },
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "computed"
+            },
+            "properties": [
               {
-                "color": "red",
-                "value": 80
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "from cache"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
               }
             ]
           }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(rate({__name__=~\"vllm:prompt_tokens_by_source_total|sglang:uncached_prompt_tokens_histogram_sum|llamacpp:prompt_tokens_total|llamacpp_prompt_tokens_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\",source=~\"local_compute|\"}[$__rate_interval]) keep_metric_names)",
+          "legendFormat": "computed",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(rate({__name__=~\"vllm:prompt_tokens_by_source_total|sglang:cached_tokens_total|llamacpp:prompt_tokens_cached_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\",source=~\"local_cache_hit|\"}[$__rate_interval]) keep_metric_names)",
+          "legendFormat": "from cache",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Concurrency",
+      "description": "Requests running and queued, peak per step. A queue that stays above zero means the engine is at capacity.",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "none",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 12,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "running"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "queued"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(max_over_time({__name__=~\"vllm:num_requests_running|sglang:num_running_reqs|llamacpp:requests_processing\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)",
+          "legendFormat": "running",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(max_over_time({__name__=~\"vllm:num_requests_waiting|sglang:num_queue_reqs|llamacpp:requests_deferred\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)",
+          "legendFormat": "queued",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "interval": "1m"
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Latency",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "panels": []
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Time to First Token",
+      "description": "p50 (solid) and p95 (dashed) time to first token, per engine histogram. Gaps: no request finished in that step, or llama.cpp was resident (it exports no latency histograms; its mean time per generated token is drawn in Inter-token Latency).",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.5, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:time_to_first_token_seconds_bucket|sglang:time_to_first_token_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "p50",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:time_to_first_token_seconds_bucket|sglang:time_to_first_token_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "p95",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Inter-token Latency",
+      "description": "p50 and p95 gap between generated tokens for one request -- 1 / this is the per-stream decode speed (17.5 ms is about 57 tok/s). llama.cpp has no histogram: its mean time per generated token (dotted) comes from tokens_predicted_seconds / tokens_predicted. Gaps: no request finished in that step, or llama.cpp was resident (it exports no latency histograms; its mean time per generated token is drawn in Inter-token Latency).",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#9085e9"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "mean (llama.cpp)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dot",
+                  "dash": [
+                    0,
+                    4
+                  ]
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.5, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:inter_token_latency_seconds_bucket|sglang:inter_token_latency_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "p50",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:inter_token_latency_seconds_bucket|sglang:inter_token_latency_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "p95",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(rate(llamacpp:tokens_predicted_seconds_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval])) / sum(rate(llamacpp:tokens_predicted_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]))",
+          "legendFormat": "mean (llama.cpp)",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "End-to-end Latency",
+      "description": "p50 and p95 total request time, first byte in to last token out. Gaps: no request finished in that step, or llama.cpp was resident (it exports no latency histograms; its mean time per generated token is drawn in Inter-token Latency).",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#d55181"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.5, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:e2e_request_latency_seconds_bucket|sglang:e2e_request_latency_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "p50",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:e2e_request_latency_seconds_bucket|sglang:e2e_request_latency_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "p95",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Queue Time",
+      "description": "p50 and p95 time requests waited before being scheduled -- rises when the KV cache or batch is full. Gaps: no request finished in that step, or llama.cpp was resident (it exports no latency histograms; its mean time per generated token is drawn in Inter-token Latency).",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 14
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#c98500"
+          },
+          "unit": "s",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 2
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "p95"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.5, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:request_queue_time_seconds_bucket|sglang:queue_time_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "p50",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:request_queue_time_seconds_bucket|sglang:queue_time_seconds_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "p95",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Cache & Workload",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 22
+      },
+      "panels": []
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "KV Cache",
+      "description": "Share of the KV cache in use, peak per step (vLLM kv_cache_usage_perc / SGLang token_usage). Near 100% the engine starts preempting requests (see Preemptions in Engine Limits).",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 23
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#d95926"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0,
+          "max": 1
         },
         "overrides": []
       },
+      "options": {
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(max_over_time({__name__=~\"vllm:kv_cache_usage_perc|sglang:token_usage\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)",
+          "legendFormat": "KV cache",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Prefix Cache Hits",
+      "description": "Share of prompt tokens served from the prefix cache in each step: vLLM prefix_cache_hits / queries, SGLang cached / prompt tokens, llama.cpp prompt_tokens_cached / (prompt + cached) -- llama.cpp's prompt counter excludes cache hits, so dividing by it alone read 330-3,250%. With long agentic prompts this is what keeps prefill cheap. Gaps mean no prompts in that step.",
       "gridPos": {
         "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 23
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#199e70"
+          },
+          "unit": "percentunit",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 18,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(increase({__name__=~\"vllm:prefix_cache_hits_total|sglang:cached_tokens_total|llamacpp:prompt_tokens_cached_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names) / sum(increase({__name__=~\"vllm:prefix_cache_queries_total|sglang:prompt_tokens_total|llamacpp:prompt_tokens_total|llamacpp:prompt_tokens_cached_total\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval]) keep_metric_names)",
+          "legendFormat": "prefix hits",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "interval": "5m"
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Request Shape",
+      "description": "Tokens per request: prompt (magenta) and generated (blue), p50 solid and p95 dashed, on a log axis -- prompts here are two orders of magnitude longer than completions. Per-engine histograms (vLLM / SGLang; llama.cpp has none).",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 23
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "short",
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "gradientMode": "opacity",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "auto",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "log",
+              "log": 10
+            },
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt p50"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt p95"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "generated p50"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "generated p95"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "prompt p95"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "generated p95"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    4
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.5, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:request_prompt_tokens_bucket|sglang:prompt_tokens_histogram_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "prompt p50",
+          "instant": false,
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:request_prompt_tokens_bucket|sglang:prompt_tokens_histogram_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "prompt p95",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.5, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:request_generation_tokens_bucket|sglang:generation_tokens_histogram_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "generated p50",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(histogram_quantile(0.95, sum by (eng, le)(label_replace(rate({__name__=~\"vllm:request_generation_tokens_bucket|sglang:generation_tokens_histogram_bucket\",job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__rate_interval]) keep_metric_names, \"eng\", \"$1\", \"__name__\", \"([a-z]+):.*\"))))",
+          "legendFormat": "generated p95",
+          "instant": false,
+          "range": true,
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "Requests & Engine",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 31
+      },
+      "panels": []
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Request Outcomes",
+      "description": "How requests ended, per step: completed normally, cut off at max tokens, aborted (client disconnect / cancel), or errored. vLLM reports finished_reason; SGLang's finished-request count includes aborts, so completed = finished - aborted. llama.cpp exports no request counters. Normal completions stay grey so problems stand out.",
+      "gridPos": {
+        "h": 10,
         "w": 12,
         "x": 0,
-        "y": 24
+        "y": 32
       },
-      "id": 11,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "11.6.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "vm"
-          },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "sglang:cache_hit_rate",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Cache Hit Rate",
-      "type": "timeseries"
-    },
-    {
       "datasource": {
         "type": "prometheus",
         "uid": "vm"
@@ -828,37 +2174,38 @@
           "color": {
             "mode": "palette-classic"
           },
+          "unit": "none",
           "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 0,
+            "fillOpacity": 88,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.6,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
             "hideFrom": {
               "legend": false,
               "tooltip": false,
               "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
             }
           },
           "mappings": [],
@@ -866,121 +2213,526 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stop"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "completed"
               },
               {
-                "color": "red",
-                "value": 80
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#898781"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "length"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "hit max tokens"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#fab219"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "repetition"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "repetition"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#fab219"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "abort"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "aborted"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ec835a"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "error"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "error"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d03b3b"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "completed (SGLang)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#898781"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "aborted (SGLang)"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#ec835a"
+                }
               }
             ]
           }
-        },
-        "overrides": []
+        ]
       },
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 24
-      },
-      "id": 8,
       "options": {
         "legend": {
-          "calcs": [],
+          "showLegend": true,
           "displayMode": "list",
           "placement": "bottom",
-          "showLegend": true
+          "calcs": []
         },
         "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc",
+          "hideZeros": true
         }
       },
-      "pluginVersion": "11.6.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "vm"
           },
-          "disableTextWrap": false,
-          "editorMode": "code",
-          "expr": "sglang:num_queue_reqs",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
+          "expr": "sum by (finished_reason)(increase(vllm:request_success_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval])) > 0",
+          "legendFormat": "{{finished_reason}}",
           "instant": false,
-          "legendFormat": "{{instance}}",
           "range": true,
-          "refId": "A",
-          "useBackend": false
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(sum(increase(sglang:e2e_request_latency_seconds_count{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval])) - (sum(increase(sglang:num_aborted_requests_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval])) or vector(0))) > 0",
+          "legendFormat": "completed (SGLang)",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(increase(sglang:num_aborted_requests_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__interval])) > 0",
+          "legendFormat": "aborted (SGLang)",
+          "instant": false,
+          "range": true,
+          "refId": "C"
         }
       ],
-      "title": "Number Queued Requests",
-      "type": "timeseries"
-    }
-  ],
-  "preload": false,
-  "refresh": "5s",
-  "schemaVersion": 41,
-  "tags": [],
-  "templating": {
-    "list": [
-      {
-        "current": {
-          "text": "127.0.0.1:30000",
-          "value": "127.0.0.1:30000"
-        },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "vm"
-        },
-        "definition": "label_values(instance)",
-        "includeAll": false,
-        "label": "instance",
-        "name": "instance",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(instance)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
-        },
-        "refresh": 1,
-        "regex": "",
-        "type": "query"
+      "interval": "1h",
+      "maxDataPoints": 100
+    },
+    {
+      "id": 16,
+      "type": "state-timeline",
+      "title": "Engine Residency",
+      "description": "Which engine and model the box was serving over the range, one row each (a gap = nothing serving / box off). Ignores the Model filter.",
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 32
       },
-      {
-        "current": {
-          "text": "meta-llama/Llama-3.1-8B-Instruct",
-          "value": "meta-llama/Llama-3.1-8B-Instruct"
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "1": {
+                  "text": "serving",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#898781",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "lineWidth": 0,
+            "fillOpacity": 85,
+            "insertNulls": false,
+            "spanNulls": false,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          }
         },
-        "datasource": {
-          "type": "prometheus",
-          "uid": "vm"
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^vLLM.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^SGLang.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d55181"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^llama\\.cpp.*"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.8,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom"
         },
-        "definition": "label_values(model_name)",
-        "includeAll": false,
-        "label": "model name",
-        "name": "model_name",
-        "options": [],
-        "query": {
-          "qryType": 1,
-          "query": "label_values(model_name)",
-          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        "tooltip": {
+          "mode": "single",
+          "sort": "none",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "label_set(max by (model_name)(max_over_time(vllm:num_requests_running{job=\"llm\",host=~\"$host\"}[$__interval])) * 0 + 1, \"engine\", \"vLLM\")",
+          "legendFormat": "vLLM · {{model_name}}",
+          "instant": false,
+          "range": true,
+          "refId": "A"
         },
-        "refresh": 1,
-        "regex": "",
-        "type": "query"
-      }
-    ]
-  },
-  "time": {
-    "from": "now-30m",
-    "to": "now"
-  },
-  "timepicker": {},
-  "timezone": "browser",
-  "title": "Inference Detail",
-  "uid": "aiobs-inference",
-  "version": 11
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "label_set(max by (model_name)(max_over_time(sglang:num_running_reqs{job=\"llm\",host=~\"$host\"}[$__interval])) * 0 + 1, \"engine\", \"SGLang\")",
+          "legendFormat": "SGLang · {{model_name}}",
+          "instant": false,
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "label_set(max(max_over_time(llamacpp:requests_processing{job=\"llm\",host=~\"$host\"}[$__interval])) * 0 + 1, \"engine\", \"llama.cpp\")",
+          "legendFormat": "llama.cpp",
+          "instant": false,
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "interval": "5m"
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "Engine Limits",
+      "description": "Capacity of the resident engine, evaluated now: KV-cache capacity in tokens (vLLM cache_config_info / SGLang max_total_num_tokens), full-context requests that fit at once (vLLM kv_cache_max_concurrency), context window (SGLang context_len / llama.cpp n_tokens_max), GPU memory share the engine claimed (vLLM gpu_memory_utilization), requests preempted over the range (vLLM), and speculative-decoding acceptance (SGLang spec_accept_rate / llama.cpp accepted / drafted). '–' = not exposed by the resident engine.",
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 38
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "–",
+                  "color": "#898781",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "D"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "F"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "wideLayout": true,
+        "colorMode": "none",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "showPercentChange": false,
+        "text": {
+          "valueSize": 20,
+          "titleSize": 11
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"kv_cache_size_tokens\")) or max(last_over_time(sglang:max_total_num_tokens{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]))) or on() vector(-1)",
+          "legendFormat": "KV capacity",
+          "instant": true,
+          "range": false,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"kv_cache_max_concurrency\")) or on() vector(-1)",
+          "legendFormat": "Full-ctx slots",
+          "instant": true,
+          "range": false,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(max(last_over_time(sglang:context_len{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m])) or max(last_over_time(llamacpp:n_tokens_max{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]))) or on() vector(-1)",
+          "legendFormat": "Context",
+          "instant": true,
+          "range": false,
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "max(label_value(last_over_time(vllm:cache_config_info{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m]), \"gpu_memory_utilization\")) or on() vector(-1)",
+          "legendFormat": "GPU mem",
+          "instant": true,
+          "range": false,
+          "refId": "D"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "sum(increase(vllm:num_preemptions_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__range])) or on() vector(-1)",
+          "legendFormat": "Preemptions",
+          "instant": true,
+          "range": false,
+          "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "expr": "(max(last_over_time(sglang:spec_accept_rate{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[10m])) or (sum(increase(llamacpp:spec_decode_num_accepted_tokens_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__range])) / sum(increase(llamacpp:spec_decode_num_draft_tokens_total{job=\"llm\",host=~\"$host\",model_name=~\"$model\"}[$__range])))) or on() vector(-1)",
+          "legendFormat": "Spec accept",
+          "instant": true,
+          "range": false,
+          "refId": "F"
+        }
+      ]
+    }
+  ]
 }

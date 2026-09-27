@@ -132,6 +132,14 @@ The headline cards always cover the last few hours, whatever the dashboard's tim
 
 Pick the box (by its `host` label) and the GPU at the top. It targets `nvidia_gpu_exporter`'s nvidia-smi build, the one `deploy-gpu-box.sh` installs. The NVML-only process / ECC / XID / MIG / PCIe-throughput metrics aren't produced by that build, so they aren't charted.
 
+**Inference Detail** (`/d/aiobs-inference`) covers the local inference server, whichever engine is running (vLLM, SGLang or llama.cpp). Each signal is one query across all three engines' metric names, so switching engines doesn't blank the panels:
+- headline cards for the engine and model now serving, generation speed, running and queued requests, KV-cache use, TTFT p95 over the last hour, and requests today
+- throughput (generation and prefill), concurrency, and latency percentiles (time to first token, inter-token, end-to-end, queue)
+- KV-cache and prefix-cache hit rate, plus request shape: prompt and completion tokens per request
+- request outcomes (completed, hit max tokens, aborted, error), which engine was serving when, and the engine's limits (KV capacity, full-context slots, context window, preemptions, speculative-decoding acceptance)
+
+Metrics an engine doesn't export show as `–`. llama.cpp has no latency histograms, request counters or model label.
+
 ## Configuration reference
 
 Every variable lives in `config/estate.env` (copy of `config/estate.example.env` with real values). None of it is ever committed.

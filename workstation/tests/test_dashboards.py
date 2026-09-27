@@ -34,6 +34,9 @@ regression protection as the collector. Checks:
   `@ ${__from:date:seconds}` and look ahead one step (`offset -$__interval`)
   so the value includes the newest push whatever step Grafana picks
 - estate.json: each provider wears one colour everywhere it is overridden
+- inference-detail.json: engine-agnostic -- any panel that reads SGLang also
+  reads vLLM (the old dashboard was SGLang-only and went blank when the box
+  moved to llama.cpp / vLLM), and the headline cards are pinned or instant
 - estate.json: the model-visibility variables (provider / model / kind)
   exist, are multi-select with an All option, and the `kind` filter is never
   applied to `aiobs_cost_usd_total` (cost series carry no `kind` label, so a
@@ -293,6 +296,31 @@ class TestEstateDashboard(unittest.TestCase):
             self.assertIn(title, titles)
 
 
+def _cards_pinned_or_instant(test, dash):
+    for panel in dash["panels"]:
+        if panel.get("type") != "stat" or panel["gridPos"]["y"] != 0:
+            continue
+        instant = all(t.get("instant") for t in panel.get("targets", []))
+        test.assertTrue(
+            panel.get("timeFrom") or instant,
+            f"card {panel['id']} follows the dashboard range -- at 30d its last step is hours old",
+        )
+
+
+class TestInferenceDashboard(unittest.TestCase):
+    def setUp(self):
+        self.dash = _load("inference-detail.json")
+
+    def test_no_panel_is_sglang_only(self):
+        for panel in _walk(self.dash["panels"]):
+            exprs = " ".join(t.get("expr", "") for t in panel.get("targets", []))
+            if "sglang:" in exprs:
+                self.assertIn("vllm:", exprs, f"panel {panel['id']} ({panel.get('title')}) reads SGLang but not vLLM")
+
+    def test_headline_cards_are_pinned_or_instant(self):
+        _cards_pinned_or_instant(self, self.dash)
+
+
 class TestGpuDashboard(unittest.TestCase):
     def setUp(self):
         self.dash = _load("gpu-detail.json")
@@ -310,14 +338,7 @@ class TestGpuDashboard(unittest.TestCase):
             self.assertNotIn("instance", query, f"variable {var['name']} keys on instance")
 
     def test_headline_cards_are_pinned_or_instant(self):
-        for panel in self.dash["panels"]:
-            if panel.get("type") != "stat" or panel["gridPos"]["y"] != 0:
-                continue
-            instant = all(t.get("instant") for t in panel.get("targets", []))
-            self.assertTrue(
-                panel.get("timeFrom") or instant,
-                f"card {panel['id']} follows the dashboard range -- at 30d its last step is hours old",
-            )
+        _cards_pinned_or_instant(self, self.dash)
 
     def test_health_panels_are_evaluated_now(self):
         titles = {p.get("title"): p for p in _walk(self.dash["panels"])}

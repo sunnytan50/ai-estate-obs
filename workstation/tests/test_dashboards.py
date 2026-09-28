@@ -324,8 +324,8 @@ class TestEstateDashboard(unittest.TestCase):
     def test_model_panels_exist(self):
         titles = {p.get("title") for p in _walk(self.dash["panels"])}
         for title in (
-            "Daily Tokens by Model (30d)",
-            "Cost per Day by Model (30d)",
+            "Daily Tokens by Model",
+            "Cost per Day by Model",
             "Model Breakdown (30d)",
             "Cost Month-to-Date",
         ):

@@ -115,8 +115,8 @@ Open `config/estate.env` in an editor and work through the steps below in order 
 `http://<hub-tailnet-ip>:3000/d/aiobs-estate` over the tailnet — the **AI Estate** dashboard, top to bottom:
 
 - **Headline cards** — spend today, spend this month, a month-end forecast (7-day trend for the first week, then linear run-rate), tokens this month, prompt-cache hit rate, GPU power, local tokens today, and a pipeline check (✓ All up / ✕ n down).
-- **Cloud Spend & Tokens** — daily spend and daily tokens by provider (30 days, one bar per local day, today last) beside month-to-date bar gauges. Each provider keeps one colour across the whole dashboard.
-- **Models** — daily cost and tokens per model, with legends ranked by 30-day total and each model drawn in a shade of its provider's colour. Below them, the **Model Breakdown** table: tokens, output, cost, share of spend and blended $ per 1M tokens, ranked by cost.
+- **Cloud Spend & Tokens** — daily spend and daily tokens by provider (over the selected range, 30 days by default; one bar per local day, today last) beside month-to-date bar gauges. Each provider keeps one colour across the whole dashboard.
+- **Models** — daily cost and tokens per model, with legends ranked by total over the selected range and each model drawn in a shade of its provider's colour. Below them, the **Model Breakdown** table: tokens, output, cost, share of spend and blended $ per 1M tokens, ranked by cost.
 - **Local GPU & Inference** — the engine and model currently serving (vLLM, SGLang or llama.cpp, detected from whichever metrics are live), queue/KV-cache/prefix-cache state, local-vs-cloud output today, GPU power against its limit, utilization and VRAM, vitals and energy today, throughput, and TTFT / end-to-end latency.
 - **Pipeline & Hermes** — an estate timeline (engine residency, scrape health, collector lanes over the chosen range), a collector table with the time since each lane last succeeded, and the Hermes client view.
 

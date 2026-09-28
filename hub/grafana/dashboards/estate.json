@@ -13,7 +13,7 @@
   "version": 8,
   "refresh": "30s",
   "time": {
-    "from": "now-24h",
+    "from": "now-30d",
     "to": "now"
   },
   "timepicker": {
@@ -201,7 +201,7 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#898781"
+            "fixedColor": "#5fb7d4"
           },
           "unit": "currencyUSD",
           "mappings": [],
@@ -285,7 +285,7 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#898781"
+            "fixedColor": "#5fb7d4"
           },
           "unit": "currencyUSD",
           "mappings": [],
@@ -329,7 +329,7 @@
             "uid": "vm"
           },
           "expr": "(sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -2i) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -2i)*0)))) and on() ((abs(vector(${__from:date:seconds}) - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
-          "legendFormat": "Spend this month",
+          "legendFormat": "Spend MTD",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -340,7 +340,7 @@
             "uid": "vm"
           },
           "expr": "(sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now()) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now())*0)))) unless on() ((abs(vector(${__from:date:seconds}) - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
-          "legendFormat": "Spend this month",
+          "legendFormat": "Spend MTD",
           "instant": true,
           "range": false,
           "refId": "B"
@@ -369,7 +369,7 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#898781"
+            "fixedColor": "#5fb7d4"
           },
           "unit": "currencyUSD",
           "mappings": [],
@@ -413,7 +413,7 @@
             "uid": "vm"
           },
           "expr": "(((sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -2i) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -2i)*0)))) * (days_in_month(vector(${__from:date:seconds} + 259200)) * 86400) / ((time() + 2 * step() - clamp_min(vector(time() + 2 * step() - now()), 0)) - ${__from:date:seconds}) and on() (vector((time() + 2 * step() - clamp_min(vector(time() + 2 * step() - now()), 0)) - ${__from:date:seconds}) >= 604800)) or ((sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -2i) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -2i)*0)))) + clamp_min((days_in_month(vector(${__from:date:seconds} + 259200)) * 86400) - ((time() + 2 * step() - clamp_min(vector(time() + 2 * step() - now()), 0)) - ${__from:date:seconds}), 0) / 86400 * (sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -2i) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset 7d) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -2i)*0)))) / 7 and on() (vector((time() + 2 * step() - clamp_min(vector(time() + 2 * step() - now()), 0)) - ${__from:date:seconds}) < 604800))) and on() ((abs(vector(${__from:date:seconds}) - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
-          "legendFormat": "Month-end forecast",
+          "legendFormat": "Month forecast",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -424,7 +424,7 @@
             "uid": "vm"
           },
           "expr": "(((sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now()) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now())*0)))) * (days_in_month(vector(((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400) + 259200)) * 86400) / (now() - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) and on() (vector((now() - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400))) >= 604800)) or ((sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now()) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now())*0)))) + clamp_min((days_in_month(vector(((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400) + 259200)) * 86400) - (now() - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)), 0) / 86400 * (sum(max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now()) - (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (now() - 604800)) or (max_over_time(aiobs_cost_usd_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now())*0)))) / 7 and on() (vector((now() - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400))) < 604800))) unless on() ((abs(vector(${__from:date:seconds}) - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
-          "legendFormat": "Month-end forecast",
+          "legendFormat": "Month forecast",
           "instant": true,
           "range": false,
           "refId": "B"
@@ -453,7 +453,7 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#898781"
+            "fixedColor": "#5fb7d4"
           },
           "unit": "short",
           "mappings": [],
@@ -497,7 +497,7 @@
             "uid": "vm"
           },
           "expr": "(sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -2i) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] @ ${__from:date:seconds}) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] offset -2i)*0)))) and on() ((abs(vector(${__from:date:seconds}) - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
-          "legendFormat": "Tokens this month",
+          "legendFormat": "Tokens MTD",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -508,7 +508,7 @@
             "uid": "vm"
           },
           "expr": "(sum(max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] @ now()) - (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] @ ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) or (max_over_time(aiobs_tokens_total{origin=\"client\",provider!=\"hermes\",provider=~\"$provider\",model=~\"$model\",kind=~\"$kind\"}[400d] @ now())*0)))) unless on() ((abs(vector(${__from:date:seconds}) - ((floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) - (scalar(day_of_month(vector(now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)))) - 1) * 86400)) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
-          "legendFormat": "Tokens this month",
+          "legendFormat": "Tokens MTD",
           "instant": true,
           "range": false,
           "refId": "B"
@@ -537,7 +537,7 @@
         "defaults": {
           "color": {
             "mode": "fixed",
-            "fixedColor": "#898781"
+            "fixedColor": "#5fb7d4"
           },
           "unit": "percentunit",
           "mappings": [],
@@ -731,8 +731,7 @@
                 "value": null
               }
             ]
-          },
-          "decimals": 1
+          }
         },
         "overrides": []
       },
@@ -763,7 +762,7 @@
             "uid": "vm"
           },
           "expr": "(running_sum(sum(increase({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\"}[$__interval]) keep_metric_names) + sum(increase({__name__=~\"vllm:prompt_tokens_by_source_total|sglang:uncached_prompt_tokens_histogram_sum|llamacpp:prompt_tokens_total|llamacpp_prompt_tokens_total\",source=~\"local_compute|\"}[$__interval]) keep_metric_names))) and on() ((abs(vector(${__from:date:seconds}) - (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
-          "legendFormat": "Local tokens today",
+          "legendFormat": "Local tokens",
           "instant": false,
           "range": true,
           "refId": "A"
@@ -774,7 +773,7 @@
             "uid": "vm"
           },
           "expr": "(sum(increase({__name__=~\"vllm:generation_tokens_total|sglang:generation_tokens_total|llamacpp:tokens_predicted_total|llamacpp_tokens_predicted_total\"}[1d] offset -1d @ (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) keep_metric_names) + sum(increase({__name__=~\"vllm:prompt_tokens_by_source_total|sglang:uncached_prompt_tokens_histogram_sum|llamacpp:prompt_tokens_total|llamacpp_prompt_tokens_total\",source=~\"local_compute|\"}[1d] offset -1d @ (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) keep_metric_names)) unless on() ((abs(vector(${__from:date:seconds}) - (floor((now() + (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900)) / 86400) * 86400 - (round(((${__to:date:H} * 3600 + ${__to:date:m} * 60 + ${__to:date:s} - (${__to:date:seconds} % 86400) + 129600) % 86400 - 43200) / 900) * 900))) < 7200) and on() (vector(${__to:date:seconds}) > now() - 300))",
-          "legendFormat": "Local tokens today",
+          "legendFormat": "Local tokens",
           "instant": true,
           "range": false,
           "refId": "B"
@@ -913,7 +912,7 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Daily Spend by Provider (30d)",
+      "title": "Daily Spend by Provider",
       "description": "Stacked daily client-side USD cost per cloud provider; each bar is one LOCAL day and the last bar is today so far. Hermes is excluded (its client view mixes local and cloud-routed traffic; it has its own panel). Counters are pushed one sample per day (stamped 23:59:59 local) plus live points for today, so the query is a forward-looking two-point subtraction: at each local-midnight step D it takes max_over_time(...[400d] offset -1d) minus the counter as of D, with a label-preserving X or (X*0) fallback. The earlier backward form (offset 1d) put every bar one day late and never showed today -- verified 2026-09-27 against a raw /api/v1/export ground truth (Sep 24 = $1,992 sat under 09/25). Never increase(): verified up to ~27x off on this data. Colours are fixed per provider across the whole dashboard. Filtered by Provider / Model.",
       "gridPos": {
         "h": 9,
@@ -1079,8 +1078,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": "30d",
-      "hideTimeOverride": true,
       "interval": "1d"
     },
     {
@@ -1212,7 +1209,7 @@
         "sizing": "manual",
         "minVizWidth": 8,
         "minVizHeight": 18,
-        "maxVizHeight": 26,
+        "maxVizHeight": 44,
         "legend": {
           "showLegend": false,
           "displayMode": "list",
@@ -1220,8 +1217,8 @@
           "calcs": []
         },
         "text": {
-          "titleSize": 12,
-          "valueSize": 15
+          "titleSize": 13,
+          "valueSize": 17
         }
       },
       "targets": [
@@ -1255,7 +1252,7 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "Daily Tokens by Provider (30d)",
+      "title": "Daily Tokens by Provider",
       "description": "Stacked daily token counts per cloud provider for the selected Token kind(s); one bar per local day, today last. Same forward-looking two-point subtraction as Daily Spend by Provider. With Token kind = All, cache reads dominate -- pick output or input to see the work behind the spend.",
       "gridPos": {
         "h": 8,
@@ -1421,8 +1418,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": "30d",
-      "hideTimeOverride": true,
       "interval": "1d"
     },
     {
@@ -1554,7 +1549,7 @@
         "sizing": "manual",
         "minVizWidth": 8,
         "minVizHeight": 18,
-        "maxVizHeight": 26,
+        "maxVizHeight": 44,
         "legend": {
           "showLegend": false,
           "displayMode": "list",
@@ -1562,8 +1557,8 @@
           "calcs": []
         },
         "text": {
-          "titleSize": 12,
-          "valueSize": 15
+          "titleSize": 13,
+          "valueSize": 17
         }
       },
       "targets": [
@@ -1610,8 +1605,8 @@
     {
       "id": 21,
       "type": "timeseries",
-      "title": "Cost per Day by Model (30d)",
-      "description": "Stacked daily USD cost per (provider, model), one bar per local day, today last. Legend is ranked by 30-day total. The 12 largest series are kept with MetricsQL topk_max(), which picks ONE series set for the whole range (Prometheus topk() re-ranks per step and makes stacked bars flicker). Each model wears a shade of its provider's colour (Grafana shades mode), so the provider mix reads at a glance and the legend/tooltip name the model. Pick a model in the Model dropdown to isolate it.",
+      "title": "Cost per Day by Model",
+      "description": "Stacked daily USD cost per (provider, model), one bar per local day, today last. Legend is ranked by total over the selected range. The 12 largest series are kept with MetricsQL topk_max(), which picks ONE series set for the whole range (Prometheus topk() re-ranks per step and makes stacked bars flicker). Each model wears a shade of its provider's colour (Grafana shades mode), so the provider mix reads at a glance and the legend/tooltip name the model. Pick a model in the Model dropdown to isolate it.",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -1781,15 +1776,13 @@
           "refId": "A"
         }
       ],
-      "timeFrom": "30d",
-      "hideTimeOverride": true,
       "interval": "1d"
     },
     {
       "id": 20,
       "type": "timeseries",
-      "title": "Daily Tokens by Model (30d)",
-      "description": "Stacked daily tokens per (provider, model) for the selected Token kind(s), one bar per local day, today last; legend ranked by 30-day total. topk_max(12, ...) keeps one stable series set for the whole range; models wear shades of their provider's colour.",
+      "title": "Daily Tokens by Model",
+      "description": "Stacked daily tokens per (provider, model) for the selected Token kind(s), one bar per local day, today last; legend ranked by total over the selected range. topk_max(12, ...) keeps one stable series set for the whole range; models wear shades of their provider's colour.",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -1959,8 +1952,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": "30d",
-      "hideTimeOverride": true,
       "interval": "1d"
     },
     {
@@ -2720,7 +2711,6 @@
               }
             ]
           },
-          "decimals": 1,
           "noValue": "0"
         },
         "overrides": [
@@ -2736,7 +2726,7 @@
               },
               {
                 "id": "decimals",
-                "value": 2
+                "value": 1
               }
             ]
           }
@@ -2895,6 +2885,14 @@
                     6,
                     6
                   ]
+                }
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": true
                 }
               }
             ]
@@ -3214,7 +3212,7 @@
           "fields": "",
           "values": false
         },
-        "orientation": "auto",
+        "orientation": "horizontal",
         "textMode": "value_and_name",
         "wideLayout": true,
         "colorMode": "none",
@@ -3290,8 +3288,8 @@
       "title": "Generation Throughput",
       "description": "Decode tokens per second across whichever engine is resident (one __name__ regex over vLLM, SGLang and both llama.cpp spellings; keep_metric_names prevents duplicate-series collisions). $__rate_interval widens with the step so long ranges average instead of aliasing.",
       "gridPos": {
-        "h": 4,
-        "w": 12,
+        "h": 8,
+        "w": 8,
         "x": 0,
         "y": 67
       },
@@ -3386,10 +3384,10 @@
       "title": "Prompt Throughput",
       "description": "Prompt tokens per second the engine actually computed (prefill work), across engines -- prefix-cache hits are left out: vLLM and SGLang prompt totals include them (vLLM counted cache hits as prefill about 5.7x over) while llama.cpp's do not, so each engine's computed-only counter is used. Split from generation on purpose: prefill runs 10-30x faster than decode and would flatten it on a shared axis.",
       "gridPos": {
-        "h": 4,
-        "w": 12,
-        "x": 0,
-        "y": 71
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 67
       },
       "datasource": {
         "type": "prometheus",
@@ -3483,8 +3481,8 @@
       "description": "Time to first token and end-to-end request latency from the engine's own histograms (vLLM and SGLang expose both; llama.cpp has no latency histogram). Gaps mean no requests in that window.",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
+        "w": 8,
+        "x": 16,
         "y": 67
       },
       "datasource": {
@@ -3513,9 +3511,9 @@
             "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
-            "axisSoftMin": 0,
             "scaleDistribution": {
-              "type": "linear"
+              "type": "log",
+              "log": 10
             },
             "stacking": {
               "mode": "none",
@@ -3812,11 +3810,11 @@
       },
       "options": {
         "mergeValues": true,
-        "showValue": "auto",
+        "showValue": "never",
         "alignValue": "left",
         "rowHeight": 0.78,
         "legend": {
-          "showLegend": false,
+          "showLegend": true,
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -3922,7 +3920,7 @@
             "properties": [
               {
                 "id": "custom.minWidth",
-                "value": 140
+                "value": 110
               }
             ]
           },
@@ -3934,7 +3932,7 @@
             "properties": [
               {
                 "id": "custom.width",
-                "value": 90
+                "value": 80
               },
               {
                 "id": "mappings",
@@ -4007,6 +4005,10 @@
                 "value": {
                   "type": "color-text"
                 }
+              },
+              {
+                "id": "custom.width",
+                "value": 90
               }
             ]
           }
@@ -4089,7 +4091,7 @@
     {
       "id": 16,
       "type": "timeseries",
-      "title": "Hermes Client View (30d)",
+      "title": "Hermes Client View",
       "description": "Daily tokens by Hermes model/profile as tokscale sees Hermes on the client side -- a mix of local-served and cloud-routed traffic, so it is never summed into any cross-provider total here (anti-double-count rule). One bar per local day, today last (same forward-looking two-point subtraction as the cloud panels, not increase()).",
       "gridPos": {
         "h": 8,
@@ -4184,8 +4186,6 @@
           "refId": "A"
         }
       ],
-      "timeFrom": "30d",
-      "hideTimeOverride": true,
       "interval": "1d"
     }
   ]

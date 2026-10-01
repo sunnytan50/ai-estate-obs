@@ -110,6 +110,24 @@ Open `config/estate.env` in an editor and work through the steps below in order 
    ```
    Every subsequent run (the launchd/cron/timer cadence) only pushes what's new, via a small per-lane high-water-mark kept in `AIOBS_STATE_DIR`. Run the same `--backfill` command again (once) any time you bump `AIOBS_TOKSCALE_VERSION` in `config/estate.env` — a newer `tokscale` release can compute historical values slightly differently, so re-running `--backfill` re-derives the whole history under the one now-pinned version instead of leaving old dates frozen at an older version's numbers.
 
+Each non-dry-run cycle also atomically writes `collector-receipt.json` beside
+the push state in `AIOBS_STATE_DIR`. The receipt is the machine-readable
+freshness hand-off: top-level `state` is one of `HEALTHY`, `STALE`, `BLOCKED`,
+`PAUSED`, `RETIRED`, or `UNKNOWN`, with UTC `observed_at` and
+`last_success_at` timestamps. `data.state` describes lane freshness while
+`transport.state` describes the VictoriaMetrics push, so a healthy transport
+does not hide a failed lane and a blocked push does not look like fresh hub
+data. `data.last_success_at` advances only when every enabled lane completes;
+it describes the collector's observation of its inputs, not freshness or
+health of the underlying services or events. Missing or malformed receipts
+read as `UNKNOWN`; a healthy receipt older than the consumer's allowed age is
+assessed as `STALE`. Set the optional `AIOBS_COLLECTOR_STATE=PAUSED` or
+`RETIRED` marker when an operator has intentionally stopped the collector. A
+stop marker skips lane collection and network transport, writes a local
+receipt with `transport.state=UNKNOWN`, and preserves the prior success time.
+The receipt contains lane outcomes and bounded error evidence (reason and
+exception class only); it never contains credentials or endpoint keys.
+
 ### 4. Look at it
 
 `http://<hub-tailnet-ip>:3000/d/aiobs-estate` over the tailnet — the **AI Estate** dashboard, top to bottom:
@@ -162,10 +180,11 @@ Every variable lives in `config/estate.env` (copy of `config/estate.example.env`
 | `AIOBS_LLM_METRICS_TARGET` | gpu-box | Loopback `host:port` of the inference server's `/metrics` on the box (e.g. `127.0.0.1:8002`) |
 | `AIOBS_GPU_EXPORTER_PORT` | gpu-box | `nvidia_gpu_exporter`'s loopback listen port |
 | `AIOBS_LANES` | workstation | Comma list of collector lanes to run: `tokscale`, `openrouter`, or both. An unrecognized name is a hard config error (exit 2), before any network call |
+| `AIOBS_COLLECTOR_STATE` | workstation | Optional operator marker, `PAUSED` or `RETIRED`; it is included in the runtime receipt and does not contain credentials |
 | `AIOBS_TOKSCALE_VERSION` | workstation | Pinned `tokscale` npm package version (`npx -y tokscale@<version>`) — check `npm view tokscale version` for current |
 | `AIOBS_OPENROUTER_ENV_FILE` | workstation | Path to a file containing the OpenRouter *Management* API key. Read at runtime, never copied into this repo |
 | `AIOBS_OPENROUTER_KEY_NAME` | workstation | The var name inside that file holding the key (default `OPENROUTER_MANAGEMENT_KEY`) |
-| `AIOBS_STATE_DIR` | workstation | Where the collector keeps its small JSON push-state file (per-lane high-water mark, mode `0700`) |
+| `AIOBS_STATE_DIR` | workstation | Where the collector keeps its small JSON push-state file and atomic `collector-receipt.json` freshness/transport hand-off (mode `0700`) |
 
 ## Privacy
 

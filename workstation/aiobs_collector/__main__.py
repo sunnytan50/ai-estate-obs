@@ -41,6 +41,12 @@ from aiobs_collector.lane_openrouter import OpenRouterLane
 from aiobs_collector.lane_tokscale import TokscaleLane
 from aiobs_collector.monotonic import apply_monotonic, fetch_peaks, seed_offsets_from_peaks
 from aiobs_collector.push import push_samples
+from aiobs_collector.receipt import (
+    build_receipt,
+    complete_lane_success,
+    lane_outcomes,
+    write_receipt,
+)
 
 # name (as it appears in AIOBS_LANES) -> zero-arg-constructible Lane class.
 # Both TokscaleLane and OpenRouterLane take no constructor args -- cfg is
@@ -281,6 +287,48 @@ def _vm_base_url(cfg: dict) -> str:
     return f"http://{hub_ip}:{vm_port}"
 
 
+def _requested_collector_state(cfg: dict) -> str | None:
+    """Read an optional operator pause/retirement marker from instance config."""
+    raw = (cfg.get("AIOBS_COLLECTOR_STATE") or "").strip().upper()
+    if not raw:
+        return None
+    if raw not in {"PAUSED", "RETIRED"}:
+        raise ConfigError("AIOBS_COLLECTOR_STATE must be PAUSED or RETIRED when set")
+    return raw
+
+
+def _write_receipt(
+    *,
+    state_dir: str,
+    state: dict,
+    cfg: dict,
+    lanes: list,
+    raw_samples: list,
+    collected_count: int,
+    pushed_count: int,
+    now_ms: int,
+    transport_state: str,
+    transport_error: BaseException | str | None = None,
+    backfill: bool = False,
+) -> None:
+    enabled = [lane.name for lane in lanes]
+    successful, failed = lane_outcomes(raw_samples, enabled)
+    receipt = build_receipt(
+        observed_ms=now_ms,
+        enabled_lanes=enabled,
+        successful_lanes=successful,
+        failed_lanes=failed,
+        collected_count=collected_count,
+        pushed_count=pushed_count,
+        transport_state=transport_state,
+        prior_state=state,
+        requested_state=_requested_collector_state(cfg),
+        transport_error=transport_error,
+        backfill=backfill,
+    )
+    write_receipt(state_dir, receipt)
+
+
 def _seed_offsets(args, cfg: dict, state_dir: str, raw_samples: list, new_state: dict) -> int:
     """`--seed-offsets-from-vm`: one-off repair for series that shrank before
     the monotonic shaping existed (see monotonic.py). Reads the peak each
@@ -357,9 +405,39 @@ def main(argv=None) -> int:
     if not state_dir:
         print("aiobs_collector: AIOBS_STATE_DIR is not set in config", file=sys.stderr)
         return 2
+    try:
+        requested_state = _requested_collector_state(cfg)
+    except ConfigError as exc:
+        print(f"aiobs_collector: {exc}", file=sys.stderr)
+        return 2
 
     state = load_state(state_dir)
     now_ms = int(time.time() * 1000)
+    if requested_state in {"PAUSED", "RETIRED"}:
+        # An operator stop marker is a control boundary: do not invoke lanes,
+        # seed offsets, or contact VictoriaMetrics while it is active.  The
+        # Outside dry-run, the local receipt makes the intentional state
+        # observable and records that transport was not attempted.
+        if args.dry_run:
+            return 0
+        try:
+            _write_receipt(
+                state_dir=state_dir,
+                state=state,
+                cfg=cfg,
+                lanes=lanes,
+                raw_samples=[],
+                collected_count=0,
+                pushed_count=0,
+                now_ms=now_ms,
+                transport_state="UNKNOWN",
+                backfill=args.backfill,
+            )
+        except Exception as exc:
+            print(f"aiobs_collector: failed to write {requested_state.lower()} receipt: {exc}", file=sys.stderr)
+            return 1
+        print(f"aiobs_collector: collector state {requested_state}; collection skipped")
+        return 0
     raw_samples, new_state = run_lanes(lanes, cfg, state, now_ms)
     if args.seed_offsets_from_vm:
         return _seed_offsets(args, cfg, state_dir, raw_samples, new_state)
@@ -388,6 +466,22 @@ def main(argv=None) -> int:
         push_samples(vm_base_url, to_push)
     except Exception as exc:
         print(f"aiobs_collector: push failed: {exc}", file=sys.stderr)
+        try:
+            _write_receipt(
+                state_dir=state_dir,
+                state=state,
+                cfg=cfg,
+                lanes=lanes,
+                raw_samples=raw_samples,
+                collected_count=len(samples),
+                pushed_count=0,
+                now_ms=now_ms,
+                transport_state="BLOCKED",
+                transport_error=exc,
+                backfill=args.backfill,
+            )
+        except Exception as receipt_exc:
+            print(f"aiobs_collector: failed to write blocked receipt: {receipt_exc}", file=sys.stderr)
         return 1
 
     lane_names = ", ".join(sorted(lane.name for lane in lanes)) or "none"
@@ -395,10 +489,30 @@ def main(argv=None) -> int:
 
     final_state = compute_push_state(raw_samples, new_state, now_ms)
     final_state = compute_openrouter_state(raw_samples, final_state, now_ms)
+    successful_lanes, _failed_lanes = lane_outcomes(raw_samples, [lane.name for lane in lanes])
+    if complete_lane_success([lane.name for lane in lanes], successful_lanes):
+        final_state["collector:last_success_ms"] = now_ms
+    final_state["transport:last_success_ms"] = now_ms
     try:
         save_state(state_dir, final_state)
     except Exception as exc:
         print(f"aiobs_collector: failed to save state: {exc}", file=sys.stderr)
+        return 1
+    try:
+        _write_receipt(
+            state_dir=state_dir,
+            state=final_state,
+            cfg=cfg,
+            lanes=lanes,
+            raw_samples=raw_samples,
+            collected_count=len(samples),
+            pushed_count=len(to_push),
+            now_ms=now_ms,
+            transport_state="HEALTHY",
+            backfill=args.backfill,
+        )
+    except Exception as exc:
+        print(f"aiobs_collector: failed to write receipt: {exc}", file=sys.stderr)
         return 1
     return 0
 

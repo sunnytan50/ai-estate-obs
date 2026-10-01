@@ -23,6 +23,7 @@ the dedupe filter, and exit codes. Zero real network calls anywhere here.
 
 import contextlib
 import io
+import json
 import os
 import sys
 import tempfile
@@ -460,6 +461,47 @@ class MainEntrypointTests(unittest.TestCase):
                 main_mod.main(["--config", config, "--dry-run"])
         self.assertFalse(os.path.isdir(state_dir))
 
+    def test_paused_or_retired_marker_skips_collection_and_writes_truthful_receipt(self):
+        for marker in ("PAUSED", "RETIRED"):
+            with self.subTest(marker=marker):
+                state_dir = os.path.join(self.tmp, f"state-{marker.lower()}")
+                config = _write_config(
+                    os.path.join(self.tmp, f"estate-{marker.lower()}.env"),
+                    AIOBS_LANES="tokscale",
+                    AIOBS_COLLECTOR_STATE=marker,
+                    AIOBS_STATE_DIR=state_dir,
+                )
+                with patch("aiobs_collector.__main__.run_lanes", side_effect=AssertionError("must skip lanes")) as run:
+                    with patch("aiobs_collector.__main__.push_samples") as push:
+                        code = main_mod.main(["--config", config])
+                self.assertEqual(code, 0)
+                run.assert_not_called()
+                push.assert_not_called()
+                receipt = json.loads(Path(state_dir, "collector-receipt.json").read_text())
+                self.assertEqual(receipt["state"], marker)
+                self.assertEqual(receipt["data"]["state"], marker)
+                self.assertEqual(receipt["transport"]["state"], "UNKNOWN")
+                self.assertIsNone(receipt["last_success_at"])
+                self.assertFalse(Path(state_dir, "collector-state.json").exists())
+
+    def test_paused_or_retired_dry_run_skips_without_state_or_receipt(self):
+        for marker in ("PAUSED", "RETIRED"):
+            with self.subTest(marker=marker):
+                state_dir = os.path.join(self.tmp, f"dry-state-{marker.lower()}")
+                config = _write_config(
+                    os.path.join(self.tmp, f"dry-estate-{marker.lower()}.env"),
+                    AIOBS_LANES="tokscale",
+                    AIOBS_COLLECTOR_STATE=marker,
+                    AIOBS_STATE_DIR=state_dir,
+                )
+                with patch("aiobs_collector.__main__.run_lanes", side_effect=AssertionError("must skip lanes")) as run:
+                    with patch("aiobs_collector.__main__.push_samples") as push:
+                        code = main_mod.main(["--config", config, "--dry-run"])
+                self.assertEqual(code, 0)
+                run.assert_not_called()
+                push.assert_not_called()
+                self.assertFalse(Path(state_dir).exists())
+
     def test_successful_push_exits_0_and_calls_push_with_cfg_derived_base_url(self):
         config = _write_config(
             os.path.join(self.tmp, "estate.env"),
@@ -484,7 +526,7 @@ class MainEntrypointTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertTrue(os.path.isdir(state_dir))
 
-    def test_failed_push_exits_1_and_does_not_save_state(self):
+    def test_failed_push_exits_1_and_writes_blocked_receipt_without_state(self):
         state_dir = os.path.join(self.tmp, "state")
         config = _write_config(os.path.join(self.tmp, "estate.env"), AIOBS_LANES="", AIOBS_STATE_DIR=state_dir)
         with patch("aiobs_collector.__main__.push_samples", side_effect=RuntimeError("hub unreachable")):
@@ -492,7 +534,11 @@ class MainEntrypointTests(unittest.TestCase):
             with contextlib.redirect_stderr(stderr):
                 code = main_mod.main(["--config", config])
         self.assertEqual(code, 1)
-        self.assertFalse(os.path.isdir(state_dir))
+        self.assertTrue(os.path.isfile(os.path.join(state_dir, "collector-receipt.json")))
+        self.assertFalse(os.path.isfile(os.path.join(state_dir, "collector-state.json")))
+        receipt = json.loads(Path(state_dir, "collector-receipt.json").read_text())
+        self.assertEqual(receipt["state"], "BLOCKED")
+        self.assertEqual(receipt["transport"]["state"], "BLOCKED")
         self.assertIn("hub unreachable", stderr.getvalue())
 
     def test_missing_hub_ip_exits_2(self):

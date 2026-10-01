@@ -246,6 +246,18 @@ class StateTests(unittest.TestCase):
         save_state(self.tmp, state)
         self.assertEqual(load_state(self.tmp), state)
 
+    def test_failed_serialization_preserves_previous_state(self):
+        save_state(self.tmp, {"monotonic": {"known": 42}})
+        with self.assertRaises(TypeError):
+            save_state(self.tmp, {"bad": object()})
+        self.assertEqual(load_state(self.tmp), {"monotonic": {"known": 42}})
+        self.assertEqual(set(os.listdir(self.tmp)), {"collector-state.json"})
+
+    def test_state_file_is_private(self):
+        save_state(self.tmp, {"usage": 42})
+        mode = stat.S_IMODE(os.stat(os.path.join(self.tmp, "collector-state.json")).st_mode)
+        self.assertEqual(mode, 0o600)
+
     def test_save_state_creates_dir_with_parents(self):
         nested = os.path.join(self.tmp, "a", "b", "c")
         save_state(nested, {"x": 1})

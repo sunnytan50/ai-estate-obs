@@ -7,6 +7,7 @@ Sample, render_exposition, load_config, load_state, save_state, Lane, run_lanes.
 import json
 import os
 import sys
+import tempfile
 import traceback
 from dataclasses import dataclass
 from typing import Protocol
@@ -155,8 +156,16 @@ def save_state(state_dir: str, state: dict) -> None:
     """
     os.makedirs(state_dir, mode=0o700, exist_ok=True)
     os.chmod(state_dir, 0o700)
-    with open(_state_path(state_dir), "w", encoding="utf-8") as handle:
-        json.dump(state, handle)
+    fd, staging = tempfile.mkstemp(prefix=".collector-state-", dir=state_dir)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(state, handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(staging, _state_path(state_dir))
+    finally:
+        if os.path.exists(staging):
+            os.unlink(staging)
 
 
 class Lane(Protocol):
@@ -203,6 +212,10 @@ def run_lanes(
             lane_samples = lane.collect(cfg, state)
             samples.extend(lane_samples)
             new_state[key] = now_ms
+            # Optional metadata cache follows the normal successful-push
+            # persistence boundary; dry runs and failed pushes never save it.
+            if getattr(lane, "state_data", None) is not None:
+                new_state[f"lane:{lane.name}:data"] = lane.state_data
             up_value = 1.0
         except Exception as exc:
             print(

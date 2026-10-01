@@ -38,6 +38,7 @@ from aiobs_collector.core import (
     save_state,
 )
 from aiobs_collector.lane_openrouter import OpenRouterLane
+from aiobs_collector.lane_codex_speed import CodexSpeedLane, TOKENS, ALLOWANCE, CREDITS
 from aiobs_collector.lane_tokscale import TokscaleLane
 from aiobs_collector.monotonic import apply_monotonic, fetch_peaks, seed_offsets_from_peaks
 from aiobs_collector.push import push_samples
@@ -51,7 +52,8 @@ from aiobs_collector.receipt import (
 # name (as it appears in AIOBS_LANES) -> zero-arg-constructible Lane class.
 # Both TokscaleLane and OpenRouterLane take no constructor args -- cfg is
 # passed later, to .collect(cfg, state), not to __init__.
-_KNOWN_LANES = {"tokscale": TokscaleLane, "openrouter": OpenRouterLane}
+_KNOWN_LANES = {"tokscale": TokscaleLane, "openrouter": OpenRouterLane,
+                "codex-speed": CodexSpeedLane}
 
 # These two are the run_lanes harness's own self-health samples (Task 8):
 # always timestamped `now_ms` on every run, never part of a lane's day-
@@ -97,7 +99,8 @@ def _lane_for_sample(sample) -> "str | None":
     """Attribute a data Sample back to the lane that produced it, for
     per-lane push-dedupe state.
 
-    Only two lanes exist today. `openrouter` always labels its own samples
+    Codex speed metrics belong to their own lane, independently of tokscale's
+    existing Codex series. `openrouter` always labels its own samples
     `provider="openrouter"` -- a lane-specific constant never emitted by
     tokscale's client-name mapping/sanitizer (see lane_tokscale.py's
     `_map_provider`/`_sanitize_provider`: no real coding-assistant client is
@@ -107,6 +110,8 @@ def _lane_for_sample(sample) -> "str | None":
     this mapping doesn't anticipate) -- callers must treat None as "cannot
     attribute, do not silently drop."
     """
+    if sample.metric in {TOKENS, ALLOWANCE, CREDITS}:
+        return "codex-speed"
     provider = sample.labels.get("provider")
     if provider is None:
         return None

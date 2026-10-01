@@ -50,9 +50,12 @@ import urllib.request
 
 from aiobs_collector.core import Sample
 
-CUMULATIVE_METRICS = frozenset({"aiobs_tokens_total", "aiobs_cost_usd_total"})
+CUMULATIVE_METRICS = frozenset({
+    "aiobs_tokens_total", "aiobs_cost_usd_total", "aiobs_codex_speed_tokens_total",
+    "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total",
+})
 STATE_KEY = "monotonic"
-_PEAKS_QUERY = 'max_over_time({__name__=~"aiobs_tokens_total|aiobs_cost_usd_total"}[400d])'
+_PEAKS_QUERY = 'max_over_time({__name__=~"' + "|".join(sorted(CUMULATIVE_METRICS)) + '"}[400d])'
 
 
 def series_key(metric: str, labels: dict) -> str:

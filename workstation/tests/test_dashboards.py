@@ -80,7 +80,8 @@ BUILTIN_VARS = {
     "__name",
 }
 
-COUNTER_METRICS = ("aiobs_tokens_total", "aiobs_cost_usd_total")
+COUNTER_METRICS = ("aiobs_tokens_total", "aiobs_cost_usd_total", "aiobs_codex_speed_tokens_total",
+                   "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total")
 VAR_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
 
 
@@ -330,6 +331,22 @@ class TestEstateDashboard(unittest.TestCase):
             "Cost Month-to-Date",
         ):
             self.assertIn(title, titles)
+
+    def test_astra_speed_estimates_are_separate_from_usd(self):
+        panels = {p["id"]: p for p in self.dash["panels"]}
+        for i in (201, 202, 203, 204):
+            for t in panels[i]["targets"]:
+                self.assertTrue(t["instant"])
+                self.assertIn("@ now()", t["expr"])
+                self.assertIn("2592000", t["expr"])
+                self.assertIn('model="gpt-6-astra"', t["expr"])
+                self.assertIn('$provider', t["expr"])
+                self.assertIn('$model', t["expr"])
+                self.assertNotIn("aiobs_cost_usd_total", t["expr"])
+        self.assertIn("8×", panels[205]["options"]["content"])
+        self.assertIn("6×", panels[205]["options"]["content"])
+        self.assertIn("Unknown history is excluded", panels[205]["options"]["content"])
+        self.assertIn("not actual quota percentage", panels[205]["options"]["content"])
 
 
 def _cards_pinned_or_instant(test, dash):

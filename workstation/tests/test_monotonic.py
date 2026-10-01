@@ -107,8 +107,11 @@ class LatestRawBySeriesTests(unittest.TestCase):
     def test_gauges_are_ignored(self):
         self.assertEqual(latest_raw_by_series([_gauge("tokscale", 1.0, DAY1)]), {})
 
-    def test_cumulative_metric_set_is_exactly_tokens_and_cost(self):
-        self.assertEqual(set(CUMULATIVE_METRICS), {"aiobs_tokens_total", "aiobs_cost_usd_total"})
+    def test_cumulative_metric_set_includes_codex_speed_counters(self):
+        self.assertEqual(set(CUMULATIVE_METRICS), {
+            "aiobs_tokens_total", "aiobs_cost_usd_total", "aiobs_codex_speed_tokens_total",
+            "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total",
+        })
 
 
 class ApplyMonotonicTests(unittest.TestCase):

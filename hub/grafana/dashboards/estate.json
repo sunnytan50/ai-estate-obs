@@ -10,7 +10,7 @@
   "editable": true,
   "graphTooltip": 1,
   "schemaVersion": 39,
-  "version": 8,
+  "version": 22,
   "refresh": "30s",
   "time": {
     "from": "now-30d",
@@ -186,7 +186,7 @@
       "id": 101,
       "type": "stat",
       "title": "",
-      "description": "Cloud spend since local midnight, all selected providers/models (hermes excluded -- see the anti-double-count rule). Sparkline: the last 14 local days, today last. Day-granular counters use the forward-looking daily delta (see Daily Spend by Provider).",
+      "description": "Cloud spend since local midnight, all selected providers/models (hermes excluded -- see the anti-double-count rule). Sparkline: the last 14 local days, today last. Day-granular counters use the forward-looking daily delta (see Daily Spend by Provider). For subscription clients, USD values are API-equivalent estimates; speed-mode allowance multipliers appear separately in Codex Speed & Allowance.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -270,7 +270,7 @@
       "id": 102,
       "type": "stat",
       "title": "",
-      "description": "Cloud spend since the start of the local calendar month (panel pinned to now/M; the baseline is read with @ ${__from:date:seconds}). The now-side looks ahead one hourly step so the tile includes the newest collector push. Range query reduced to its last point -- VictoriaMetrics' instant path can mis-evaluate this max_over_time + large-offset shape (README troubleshooting).",
+      "description": "Cloud spend since the start of the local calendar month (panel pinned to now/M; the baseline is read with @ ${__from:date:seconds}). The now-side looks ahead one hourly step so the tile includes the newest collector push. Range query reduced to its last point -- VictoriaMetrics' instant path can mis-evaluate this max_over_time + large-offset shape (README troubleshooting). For subscription clients, USD values are API-equivalent estimates; speed-mode allowance multipliers appear separately in Codex Speed & Allowance.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -354,7 +354,7 @@
       "id": 103,
       "type": "stat",
       "title": "",
-      "description": "Where this month's spend is heading. From day 7 on: linear run-rate, spend so far x (days in month / days elapsed). In the first 7 days: spend so far + remaining days x the average daily spend of the last 7 days -- a straight line through a few hours of spend is noise (backtest: on 1 Aug the linear projection read $0 against a $9,000 month; this reads $6,340, and it converges on the actual total at month end). Bursty weeks still move it; it is a projection, not a budget. Sparkline: the forecast as it evolved through the month (each step divides by that step's own elapsed time). days_in_month() is evaluated on a timestamp three days into the local month so the UTC-based function names the right month.",
+      "description": "Where this month's spend is heading. From day 7 on: linear run-rate, spend so far x (days in month / days elapsed). In the first 7 days: spend so far + remaining days x the average daily spend of the last 7 days -- a straight line through a few hours of spend is noise (backtest: on 1 Aug the linear projection read $0 against a $9,000 month; this reads $6,340, and it converges on the actual total at month end). Bursty weeks still move it; it is a projection, not a budget. Sparkline: the forecast as it evolved through the month (each step divides by that step's own elapsed time). days_in_month() is evaluated on a timestamp three days into the local month so the UTC-based function names the right month. For subscription clients, USD values are API-equivalent estimates; speed-mode allowance multipliers appear separately in Codex Speed & Allowance.",
       "gridPos": {
         "h": 4,
         "w": 3,
@@ -809,22 +809,22 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "✓ All up",
+                  "text": "\u2713 All up",
                   "color": "#0ca30c",
                   "index": 0
                 },
                 "1": {
-                  "text": "✕ 1 down",
+                  "text": "\u2715 1 down",
                   "color": "#d03b3b",
                   "index": 1
                 },
                 "2": {
-                  "text": "✕ 2 down",
+                  "text": "\u2715 2 down",
                   "color": "#d03b3b",
                   "index": 2
                 },
                 "3": {
-                  "text": "✕ 3 down",
+                  "text": "\u2715 3 down",
                   "color": "#d03b3b",
                   "index": 3
                 }
@@ -897,6 +897,385 @@
       "interval": "1m"
     },
     {
+      "id": 200,
+      "type": "row",
+      "title": "Codex Astra \u00b7 Speed & Allowance",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 201,
+      "type": "stat",
+      "title": "Tokens (30d)",
+      "description": "Observed local Astra tokens during the last 30 days. Uncached input, cached input and output counted once; reasoning is included in output. Includes unknown speed/auth, excludes confirmed API-key requests. Provider / Model / Token kind filters apply. Pinned to now.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 5,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "noValue": "No observed usage"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum((max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\",kind=~\"$kind\"}[400d] @ now()) - (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\",kind=~\"$kind\"}[400d] @ (now() - 2592000)) or (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\",kind=~\"$kind\"}[400d] @ now())*0))))",
+          "legendFormat": "Tokens (30d)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 202,
+      "type": "stat",
+      "title": "Allowance Index (30d)",
+      "description": "Estimated relative allowance use for observed subscription requests with known speed: Standard 1x, Fast 2.5x, Ultrafast 8x. Weighted by Astra Standard credit rates: 250 / 25 / 1250 per million uncached input / cached input / output. Comparison index, not actual quota percent, credits charged or USD. Unknown modes and API-key usage excluded. Provider / Model filters apply; all token kinds included. Pinned to now.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 5,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "noValue": "No observed usage"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum((max_over_time(aiobs_codex_allowance_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now()) - (max_over_time(aiobs_codex_allowance_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (now() - 2592000)) or (max_over_time(aiobs_codex_allowance_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now())*0))))",
+          "legendFormat": "Allowance Index (30d)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "type": "stat",
+      "title": "Credit Scenario (30d)",
+      "description": "Estimated credits if observed known-mode subscription requests had all used purchased credits: Standard 1x, Fast 2x, Ultrafast 6x. Does not establish whether included allowance or paid credits funded a request. Unknown modes and API-key usage excluded. Provider / Model filters apply; all token kinds included. Pinned to now.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 5,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "noValue": "No observed usage"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum((max_over_time(aiobs_codex_purchased_credits_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now()) - (max_over_time(aiobs_codex_purchased_credits_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (now() - 2592000)) or (max_over_time(aiobs_codex_purchased_credits_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ now())*0))))",
+          "legendFormat": "Credit Scenario (30d)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 204,
+      "type": "stat",
+      "title": "Speed Coverage (30d)",
+      "description": "Share of observed non-API Astra tokens with both speed and subscription authentication recorded. Missing diagnostic history stays unknown and is excluded from allowance/credit estimates. All token kinds; last 30 days regardless of chart zoom. Provider / Model filters apply.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 5,
+        "w": 6,
+        "h": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "noValue": "No observed usage"
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (sum((max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing=\"subscription\",speed!=\"unknown\"}[400d] @ now()) - (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing=\"subscription\",speed!=\"unknown\"}[400d] @ (now() - 2592000)) or (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing=\"subscription\",speed!=\"unknown\"}[400d] @ now())*0)))) or (sum((max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ now()) - (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (now() - 2592000)) or (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ now())*0)))) * 0)) / sum((max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ now()) - (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (now() - 2592000)) or (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ now())*0))))",
+          "legendFormat": "Speed Coverage (30d)",
+          "editorMode": "code",
+          "instant": true,
+          "range": false
+        }
+      ]
+    },
+    {
+      "id": 205,
+      "type": "text",
+      "title": "How Astra speed affects usage",
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 9,
+        "h": 11
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "| Mode | Allowance | Paid credits |\n| --- | ---: | ---: |\n| Standard | 1\u00d7 | 1\u00d7 |\n| Fast | 2.5\u00d7 | 2\u00d7 |\n| Ultrafast | **8\u00d7** | **6\u00d7** |\n\nEstimates use recorded modes. **Unknown history is excluded**; see Speed Coverage.\n\nAllowance Index is token-weighted, **not actual quota percentage**. Credit Scenario assumes paid credits. USD panels use API-equivalent estimates for subscriptions.\n\n[OpenAI speed rules](https://learn.chatgpt.com/docs/agent-configuration/speed) \u00b7 [Token weights](https://learn.chatgpt.com/docs/pricing#token-rates) \u00b7 Verified 1 Oct 2026."
+      }
+    },
+    {
+      "id": 206,
+      "type": "timeseries",
+      "title": "Astra Allowance Index per Day",
+      "description": "Daily estimated subscription allowance index by observed speed: Ultrafast 8x, Fast 2.5x, Standard 1x, weighted by Standard Astra token credit rates. Unknown modes/auth and API-key requests excluded. All token kinds; Provider / Model filters apply. Tested forward daily subtraction; today is last. Not actual quota percent or USD.",
+      "gridPos": {
+        "x": 9,
+        "y": 9,
+        "w": 15,
+        "h": 11
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic-by-name"
+          },
+          "unit": "none",
+          "custom": {
+            "drawStyle": "bars",
+            "lineInterpolation": "smooth",
+            "lineWidth": 0,
+            "fillOpacity": 88,
+            "gradientMode": "none",
+            "barAlignment": 0,
+            "barWidthFactor": 0.62,
+            "showPoints": "never",
+            "pointSize": 5,
+            "spanNulls": false,
+            "insertNulls": false,
+            "axisPlacement": "auto",
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisSoftMin": 0,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "standard"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "gray"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fast"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "yellow"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ultrafast"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc",
+          "hideZeros": true
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (speed)((max_over_time(aiobs_codex_allowance_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -1d) - (max_over_time(aiobs_codex_allowance_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d]) or (max_over_time(aiobs_codex_allowance_estimate_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",provider=~\"$provider\",model=~\"$model\"}[400d] offset -1d)*0)))) > 0",
+          "legendFormat": "{{speed}}",
+          "editorMode": "code",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "interval": "1d"
+    },
+    {
       "id": 1,
       "type": "row",
       "title": "Cloud Spend & Tokens",
@@ -905,7 +1284,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 4
+        "y": 20
       },
       "panels": []
     },
@@ -913,12 +1292,12 @@
       "id": 11,
       "type": "timeseries",
       "title": "Daily Spend by Provider",
-      "description": "Stacked daily client-side USD cost per cloud provider; each bar is one LOCAL day and the last bar is today so far. Hermes is excluded (its client view mixes local and cloud-routed traffic; it has its own panel). Counters are pushed one sample per day (stamped 23:59:59 local) plus live points for today, so the query is a forward-looking two-point subtraction: at each local-midnight step D it takes max_over_time(...[400d] offset -1d) minus the counter as of D, with a label-preserving X or (X*0) fallback. The earlier backward form (offset 1d) put every bar one day late and never showed today -- verified 2026-09-27 against a raw /api/v1/export ground truth (Sep 24 = $1,992 sat under 09/25). Never increase(): verified up to ~27x off on this data. Colours are fixed per provider across the whole dashboard. Filtered by Provider / Model.",
+      "description": "Stacked daily client-side USD cost per cloud provider; each bar is one LOCAL day and the last bar is today so far. Hermes is excluded (its client view mixes local and cloud-routed traffic; it has its own panel). Counters are pushed one sample per day (stamped 23:59:59 local) plus live points for today, so the query is a forward-looking two-point subtraction: at each local-midnight step D it takes max_over_time(...[400d] offset -1d) minus the counter as of D, with a label-preserving X or (X*0) fallback. The earlier backward form (offset 1d) put every bar one day late and never showed today -- verified 2026-09-27 against a raw /api/v1/export ground truth (Sep 24 = $1,992 sat under 09/25). Never increase(): verified up to ~27x off on this data. Colours are fixed per provider across the whole dashboard. Filtered by Provider / Model. For subscription clients, USD values are API-equivalent estimates; speed-mode allowance multipliers appear separately in Codex Speed & Allowance.",
       "gridPos": {
         "h": 9,
         "w": 16,
         "x": 0,
-        "y": 5
+        "y": 21
       },
       "datasource": {
         "type": "prometheus",
@@ -1084,12 +1463,12 @@
       "id": 22,
       "type": "bargauge",
       "title": "Cost Month-to-Date",
-      "description": "USD spend since the local month start per cloud provider, largest first (sort_desc). @ ${__from:date:seconds} anchors the month start exactly (offset $__range on a step grid landed inside the previous month's last day); the now-side looks ahead one hourly step so the bars include the newest push. Range query reduced to its last point. Filtered by Provider / Model.",
+      "description": "USD spend since the local month start per cloud provider, largest first (sort_desc). @ ${__from:date:seconds} anchors the month start exactly (offset $__range on a step grid landed inside the previous month's last day); the now-side looks ahead one hourly step so the bars include the newest push. Range query reduced to its last point. Filtered by Provider / Model. For subscription clients, USD values are API-equivalent estimates; speed-mode allowance multipliers appear separately in Codex Speed & Allowance.",
       "gridPos": {
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 5
+        "y": 21
       },
       "datasource": {
         "type": "prometheus",
@@ -1258,7 +1637,7 @@
         "h": 8,
         "w": 16,
         "x": 0,
-        "y": 14
+        "y": 30
       },
       "datasource": {
         "type": "prometheus",
@@ -1429,7 +1808,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 14
+        "y": 30
       },
       "datasource": {
         "type": "prometheus",
@@ -1598,7 +1977,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 38
       },
       "panels": []
     },
@@ -1606,12 +1985,12 @@
       "id": 21,
       "type": "timeseries",
       "title": "Cost per Day by Model",
-      "description": "Stacked daily USD cost per (provider, model), one bar per local day, today last. Legend is ranked by total over the selected range. The 12 largest series are kept with MetricsQL topk_max(), which picks ONE series set for the whole range (Prometheus topk() re-ranks per step and makes stacked bars flicker). Each model wears a shade of its provider's colour (Grafana shades mode), so the provider mix reads at a glance and the legend/tooltip name the model. Pick a model in the Model dropdown to isolate it.",
+      "description": "Stacked daily USD cost per (provider, model), one bar per local day, today last. Legend is ranked by total over the selected range. The 12 largest series are kept with MetricsQL topk_max(), which picks ONE series set for the whole range (Prometheus topk() re-ranks per step and makes stacked bars flicker). Each model wears a shade of its provider's colour (Grafana shades mode), so the provider mix reads at a glance and the legend/tooltip name the model. Pick a model in the Model dropdown to isolate it. For subscription clients, USD values are API-equivalent estimates; speed-mode allowance multipliers appear separately in Codex Speed & Allowance.",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 39
       },
       "datasource": {
         "type": "prometheus",
@@ -1787,7 +2166,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 33
+        "y": 49
       },
       "datasource": {
         "type": "prometheus",
@@ -1958,12 +2337,12 @@
       "id": 13,
       "type": "table",
       "title": "Model Breakdown (30d)",
-      "description": "Every (provider, model) pair with cloud usage in the last 30 days (hermes excluded -- a ranked table invites cross-provider summing by eye, which recreates the double-count the anti-double-count rule prevents), ranked by cost. Tokens follow the Token kind dropdown; Output is output tokens only; Share of Spend is each row's share of the 30-day cost of everything selected; $ / 1M Tokens is cost divided by the Tokens column (blended across the selected kinds). Each column is the same two-point max_over_time subtraction as the other counter panels, always the last 30 days up to now whatever the dashboard range: instant queries pinned with @ now() / @ (now() - 30d), checked equal to the range-query form to the cent (merge -> sort by time -> group by provider+model -> rename -> drop zero rows -> sort by cost -> top 20). Column headers sort and filter.",
+      "description": "Every (provider, model) pair with cloud usage in the last 30 days (hermes excluded -- a ranked table invites cross-provider summing by eye, which recreates the double-count the anti-double-count rule prevents), ranked by cost. Tokens follow the Token kind dropdown; Output is output tokens only; Share of Spend is each row's share of the 30-day cost of everything selected; $ / 1M Tokens is cost divided by the Tokens column (blended across the selected kinds). Each column is the same two-point max_over_time subtraction as the other counter panels, always the last 30 days up to now whatever the dashboard range: instant queries pinned with @ now() / @ (now() - 30d), checked equal to the range-query form to the cent (merge -> sort by time -> group by provider+model -> rename -> drop zero rows -> sort by cost -> top 20). Column headers sort and filter. For subscription clients, USD values are API-equivalent estimates; speed-mode allowance multipliers appear separately in Codex Speed & Allowance.",
       "gridPos": {
         "h": 11,
         "w": 24,
         "x": 0,
-        "y": 43
+        "y": 59
       },
       "datasource": {
         "type": "prometheus",
@@ -2389,7 +2768,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 54
+        "y": 70
       },
       "panels": []
     },
@@ -2402,7 +2781,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 55
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2502,7 +2881,7 @@
             "uid": "vm"
           },
           "expr": "(max by (model_name)(last_over_time(vllm:num_requests_running[2m]))) @ now()",
-          "legendFormat": "vLLM · {{model_name}}",
+          "legendFormat": "vLLM \u00b7 {{model_name}}",
           "instant": true,
           "range": false,
           "refId": "A"
@@ -2513,7 +2892,7 @@
             "uid": "vm"
           },
           "expr": "(max by (model_name)(last_over_time(sglang:num_running_reqs[2m]))) @ now()",
-          "legendFormat": "SGLang · {{model_name}}",
+          "legendFormat": "SGLang \u00b7 {{model_name}}",
           "instant": true,
           "range": false,
           "refId": "B"
@@ -2540,7 +2919,7 @@
         "h": 4,
         "w": 12,
         "x": 6,
-        "y": 55
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2564,7 +2943,7 @@
             ]
           },
           "decimals": 0,
-          "noValue": "–"
+          "noValue": "\u2013"
         },
         "overrides": [
           {
@@ -2688,7 +3067,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 55
+        "y": 71
       },
       "datasource": {
         "type": "prometheus",
@@ -2797,7 +3176,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 59
+        "y": 75
       },
       "datasource": {
         "type": "prometheus",
@@ -2946,7 +3325,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 59
+        "y": 75
       },
       "datasource": {
         "type": "prometheus",
@@ -3097,7 +3476,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 59
+        "y": 75
       },
       "datasource": {
         "type": "prometheus",
@@ -3291,7 +3670,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 67
+        "y": 83
       },
       "datasource": {
         "type": "prometheus",
@@ -3387,7 +3766,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 67
+        "y": 83
       },
       "datasource": {
         "type": "prometheus",
@@ -3483,7 +3862,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 67
+        "y": 83
       },
       "datasource": {
         "type": "prometheus",
@@ -3708,7 +4087,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 75
+        "y": 91
       },
       "panels": []
     },
@@ -3721,7 +4100,7 @@
         "h": 7,
         "w": 16,
         "x": 0,
-        "y": 76
+        "y": 92
       },
       "datasource": {
         "type": "prometheus",
@@ -3880,7 +4259,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 76
+        "y": 92
       },
       "datasource": {
         "type": "prometheus",
@@ -3941,12 +4320,12 @@
                     "type": "value",
                     "options": {
                       "0": {
-                        "text": "● DOWN",
+                        "text": "\u25cf DOWN",
                         "color": "#d03b3b",
                         "index": 0
                       },
                       "1": {
-                        "text": "● UP",
+                        "text": "\u25cf UP",
                         "color": "#0ca30c",
                         "index": 1
                       }
@@ -4097,7 +4476,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 83
+        "y": 99
       },
       "datasource": {
         "type": "prometheus",

@@ -124,7 +124,8 @@ def normalize_rollouts(paths, modes: dict, now_ms: int, *, attributions=None,
     for path in sorted(paths):
         thread = turn = model = None
         previous = None
-        with open(path, encoding="utf-8") as handle:
+        # errors="replace": a final line still being written can end mid-character.
+        with open(path, encoding="utf-8", errors="replace") as handle:
             for line in handle:
                 # Skip prompt/response records before decoding them.
                 if not any(marker in line for marker in

@@ -231,6 +231,12 @@ class CodexSpeedTests(unittest.TestCase):
         shaped, _ = apply_monotonic(normalize_rollouts([smaller], self.modes(), NOW), state)
         self.assertAlmostEqual(self.latest(shaped, ALLOWANCE), self.latest(s, ALLOWANCE))
 
+    def test_a_line_cut_mid_character_does_not_fail_the_lane(self):
+        p = self.rollout([context(), usage()])
+        with open(p, "ab") as handle:
+            handle.write('{"type": "event_msg", "payload": {"type": "agent_message", "message": "caf'.encode() + "é".encode()[:1])
+        self.assertEqual(self.latest(normalize_rollouts([p], self.modes(), NOW), TOKENS), 110)
+
 
 if __name__ == "__main__":
     unittest.main()

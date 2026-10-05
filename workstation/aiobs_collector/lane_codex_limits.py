@@ -34,7 +34,8 @@ def read_limit_events(paths, since_ms: int) -> list:
     events = []
     for path in paths:
         try:
-            handle = open(path, encoding="utf-8")
+            # errors="replace": a final line still being written can end mid-character.
+            handle = open(path, encoding="utf-8", errors="replace")
         except OSError:
             continue
         with handle:

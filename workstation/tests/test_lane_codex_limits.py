@@ -84,6 +84,13 @@ class LimitLaneTests(unittest.TestCase):
             samples = again.collect({"AIOBS_CODEX_HOME": str(self.root)}, {"lane:codex-limits:data": lane.state_data})
         self.assertEqual(current(samples, USED, window="weekly"), [0.22])
 
+    def test_a_line_cut_mid_character_does_not_fail_the_read(self):
+        path = self.root / "sessions" / "2026" / "10" / "05" / "rollout.jsonl"
+        path.write_text(json.dumps(event(NOW_MS - 60_000, limits())) + "\n")
+        with open(path, "ab") as handle:
+            handle.write('{"rate_limits": "token_count caf'.encode() + "é".encode()[:1])
+        self.assertEqual(len(read_limit_events([path], 0)), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

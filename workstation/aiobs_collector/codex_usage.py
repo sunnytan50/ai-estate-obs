@@ -26,7 +26,8 @@ def speed_tokens(paths, modes: dict, since_date=None) -> dict:
         thread = turn = model = None
         previous = None
         try:
-            handle = open(path, encoding="utf-8")
+            # errors="replace": Codex appends while we read; a final line can end mid-character.
+            handle = open(path, encoding="utf-8", errors="replace")
         except OSError:
             continue
         with handle:

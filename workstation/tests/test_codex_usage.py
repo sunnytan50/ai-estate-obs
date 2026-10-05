@@ -67,6 +67,13 @@ class CodexSpeedSplitTests(unittest.TestCase):
         path = self.rollout([context(), usage(when="2026-09-20T12:00:00Z")])
         self.assertEqual(speed_tokens([path], {}, since_date="2026-10-01"), {})
 
+    def test_a_line_cut_mid_character_does_not_fail_the_walk(self):
+        # Codex appends while we read; a final line can end inside a multi-byte character.
+        path = self.rollout([context(), usage()])
+        with open(path, "ab") as handle:
+            handle.write('{"type": "event_msg", "payload": {"type": "agent_message", "message": "caf'.encode() + "é".encode()[:1])
+        self.assertEqual(sum(speed_tokens([path], {}).values()), 110)
+
 
 if __name__ == "__main__":
     unittest.main()

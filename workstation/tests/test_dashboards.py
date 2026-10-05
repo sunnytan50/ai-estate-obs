@@ -50,6 +50,7 @@ regression protection as the collector. Checks:
 - estate.json: the per-model panels exist by title
 """
 
+import importlib.util
 import json
 import os
 import re
@@ -57,6 +58,9 @@ import unittest
 
 DASH_DIR = os.path.normpath(
     os.path.join(os.path.dirname(__file__), "..", "..", "hub", "grafana", "dashboards")
+)
+BUILDER = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), "..", "..", "scripts", "build_estate_dashboard.py")
 )
 
 EXPECTED_UIDS = {
@@ -81,7 +85,8 @@ BUILTIN_VARS = {
 }
 
 COUNTER_METRICS = ("aiobs_tokens_total", "aiobs_cost_usd_total", "aiobs_codex_speed_tokens_total",
-                   "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total")
+                   "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total",
+                   "aiobs_usage_tokens_total", "aiobs_list_value_usd_total", "aiobs_list_value_fallback_usd_total")
 VAR_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
 
 
@@ -184,6 +189,8 @@ class TestAllDashboards(unittest.TestCase):
 
     def test_header_cards_are_zoom_proof(self):
         for name in EXPECTED_UIDS:
+            if name == "estate.json":
+                continue  # estate cards follow the picked period by design (spec 5.1); TestEstateDashboard covers them
             for panel in _load(name)["panels"]:
                 if panel.get("type") != "stat" or panel["gridPos"]["y"] != 0:
                     continue
@@ -264,22 +271,45 @@ class TestEstateDashboard(unittest.TestCase):
                         f"panel {panel['id']} ({panel.get('title')}): backward offset 1d puts every bar a day late",
                     )
 
-    def test_month_to_date_anchors_and_looks_ahead(self):
-        for panel in _walk(self.dash["panels"]):
-            if panel.get("timeFrom") != "now/M":
+    def test_period_totals_anchor_to_the_picked_range(self):
+        for panel, expr in _exprs(self.dash):
+            if not any(m in expr for m in COUNTER_METRICS):
                 continue
-            for target in panel.get("targets", []):
-                expr = target.get("expr", "")
-                if target.get("instant"):
-                    continue
-                if any(m in expr for m in COUNTER_METRICS):
-                    self.assertIn("@ ${__from:date:seconds}", expr, f"panel {panel['id']}: month start via @")
-                    self.assertIn(
-                        "offset -2i",
-                        expr,
-                        f"panel {panel['id']}: now-side must look ahead two steps (VictoriaMetrics re-aligns long "
-                        "queries to UTC step multiples, one step can fall short)",
-                    )
+            self.assertNotRegex(expr, r"@ \$\{__(from|to):date:seconds\}",
+                                f"panel {panel['id']}: whole-second anchors drop the 23:59:59.999 day-end sample")
+            targets = [t for t in panel.get("targets", []) if t.get("expr") == expr]
+            if targets and targets[0].get("instant") and "now()" not in expr:
+                self.assertIn("@ (${__from} / 1000)", expr, f"panel {panel['id']}: period start anchor")
+                self.assertIn("@ (${__to} / 1000)", expr, f"panel {panel['id']}: period end anchor")
+
+    def test_header_cards_are_instant_and_live_cards_pin_now(self):
+        cards = [p for p in self.dash["panels"] if p.get("type") == "stat" and p["gridPos"]["y"] == 0]
+        self.assertEqual(len(cards), 7)
+        for card in cards:
+            for t in card["targets"]:
+                self.assertTrue(t.get("instant"), f"card {card['id']} {t['refId']} must be instant")
+        live = {t["legendFormat"]: t["expr"] for c in cards for t in c["targets"]}
+        for name in ("Today", "Codex limit", "Codex credits", "Pipeline"):
+            self.assertIn("now()", live[name], f"{name} must be pinned to now()")
+
+    def test_header_card_names_fit_a_laptop_screen(self):
+        # Names over 14 characters wrap at 1440 px with the side menu docked (preview, 2026-10-05).
+        for card in (p for p in self.dash["panels"] if p.get("type") == "stat" and p["gridPos"]["y"] == 0):
+            for t in card["targets"]:
+                self.assertLessEqual(len(t["legendFormat"]), 14, f"card {card['id']}: '{t['legendFormat']}'")
+
+    def test_live_gauges_pin_now_inside_the_window(self):
+        # VictoriaMetrics rounds an OUTER `f(m[w]) @ t` back to an earlier grid point, which hides a series
+        # whose only samples are minutes old (the Codex reset time read empty, 2026-10-05); `f(m[w] @ t)` is exact.
+        for panel, expr in _exprs(self.dash):
+            if re.search(r"aiobs_codex_(limit_\w+|credits_balance)", expr):
+                self.assertNotRegex(expr, r"\]\)\s*@ now\(\)", f"panel {panel['id']}: put @ now() inside the window")
+
+    def test_value_includes_openrouter_real_spend(self):
+        value = next(t["expr"] for p in self.dash["panels"] for t in p.get("targets", [])
+                     if t.get("legendFormat") == "API value")
+        self.assertIn("aiobs_list_value_usd_total{", value)
+        self.assertIn('aiobs_cost_usd_total{origin="client",provider="openrouter"', value)
 
     def test_each_provider_has_one_colour(self):
         seen = {}
@@ -301,52 +331,52 @@ class TestEstateDashboard(unittest.TestCase):
 
     def test_model_visibility_variables(self):
         variables = _variables(self.dash)
-        for name in ("provider", "model", "kind"):
-            self.assertIn(name, variables, f"template variable '{name}' missing")
+        self.assertNotIn("kind", variables)
+        for name in ("provider", "model"):
             v = variables[name]
             self.assertTrue(v.get("multi"), f"'{name}' must be multi-select")
             self.assertTrue(v.get("includeAll"), f"'{name}' must offer All")
-            self.assertEqual(v.get("allValue"), ".*", f"'{name}' All must expand to a match-everything regex")
-        # model depends on provider so the dropdown narrows as the user drills in
+            self.assertEqual(v.get("allValue"), ".*")
         model_query = variables["model"]["query"]
-        model_query = model_query["query"] if isinstance(model_query, dict) else model_query
-        self.assertIn("$provider", model_query)
+        self.assertIn("$provider", model_query["query"] if isinstance(model_query, dict) else model_query)
 
-    def test_kind_filter_never_applied_to_cost(self):
+    def test_kind_filter_never_applied_to_value_series(self):
         for panel, expr in _exprs(self.dash):
-            for selector in re.findall(r"aiobs_cost_usd_total\{([^}]*)\}", expr):
-                self.assertNotIn(
-                    "kind=",
-                    selector,
-                    f"panel {panel['id']} ({panel.get('title')}) filters cost by kind, "
-                    "but cost series carry no kind label",
-                )
+            for selector in re.findall(r"aiobs_(?:cost_usd|list_value_usd|list_value_fallback_usd)_total\{([^}]*)\}", expr):
+                self.assertNotIn("kind=", selector, f"panel {panel['id']} filters a value series by kind")
 
-    def test_model_panels_exist(self):
+    def test_panels_exist(self):
         titles = {p.get("title") for p in _walk(self.dash["panels"])}
-        for title in (
-            "Daily Tokens by Model",
-            "Cost per Day by Model",
-            "Model Breakdown (30d)",
-            "Cost Month-to-Date",
-        ):
+        for title in ("API value per day", "By provider", "Models", "API value per day by model",
+                      "Tokens per day", "Tokens by kind", "Astra speed mix", "Codex weekly limit & credits",
+                      "Local GPU & inference", "Pipeline & Hermes", "Estate Timeline", "Collector Lanes"):
             self.assertIn(title, titles)
 
-    def test_astra_speed_estimates_are_separate_from_usd(self):
-        panels = {p["id"]: p for p in self.dash["panels"]}
-        for i in (201, 202, 203, 204):
-            for t in panels[i]["targets"]:
-                self.assertTrue(t["instant"])
-                self.assertIn("@ now()", t["expr"])
-                self.assertIn("2592000", t["expr"])
-                self.assertIn('model="gpt-6-astra"', t["expr"])
-                self.assertIn('$provider', t["expr"])
-                self.assertIn('$model', t["expr"])
-                self.assertNotIn("aiobs_cost_usd_total", t["expr"])
-        self.assertIn("8×", panels[205]["options"]["content"])
-        self.assertIn("6×", panels[205]["options"]["content"])
-        self.assertIn("Unknown history is excluded", panels[205]["options"]["content"])
-        self.assertIn("not actual quota percentage", panels[205]["options"]["content"])
+    def test_no_estimate_panels_remain(self):
+        for panel, expr in _exprs(self.dash):
+            self.assertNotIn("aiobs_codex_allowance_estimate_total", expr, f"panel {panel['id']}")
+            self.assertNotIn("aiobs_codex_purchased_credits_estimate_total", expr, f"panel {panel['id']}")
+
+    def test_secondary_sections_are_collapsed_rows(self):
+        rows = {p["title"]: p for p in self.dash["panels"] if p.get("type") == "row"}
+        for title in ("Local GPU & inference", "Pipeline & Hermes"):
+            self.assertTrue(rows[title]["collapsed"], title)
+            self.assertTrue(rows[title]["panels"], title)
+
+    def test_default_range_is_this_month_with_month_links(self):
+        self.assertEqual(self.dash["time"], {"from": "now/M", "to": "now"})
+        urls = {link["title"]: link["url"] for link in self.dash["links"]}
+        self.assertIn("from=now%2FM&to=now", urls["This month"])
+        self.assertIn("from=now-1M%2FM&to=now-1M%2FM", urls["Last month"])
+
+    def test_estate_json_is_the_generator_output(self):
+        spec = importlib.util.spec_from_file_location("build_estate_dashboard", BUILDER)
+        builder = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(builder)
+        with open(os.path.join(DASH_DIR, "estate.json"), encoding="utf-8") as fh:
+            text = fh.read()
+        self.assertEqual(builder.render(builder.build(json.loads(text), "aiobs-estate")), text,
+                         "estate.json is stale: run python3 scripts/build_estate_dashboard.py")
 
 
 def _cards_pinned_or_instant(test, dash):

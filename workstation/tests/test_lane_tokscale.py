@@ -20,7 +20,7 @@ if _WORKSTATION_DIR not in sys.path:
     sys.path.insert(0, _WORKSTATION_DIR)
 
 from aiobs_collector.core import Sample  # noqa: E402
-from aiobs_collector.lane_tokscale import TokscaleLane, normalize_tokscale  # noqa: E402
+from aiobs_collector.lane_tokscale import TokscaleLane, clear_tokscale_graph_cache, normalize_tokscale  # noqa: E402
 
 _FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures" / "tokscale_sample.json"
 
@@ -399,6 +399,9 @@ class NormalizeTokscaleMalformedDocTests(unittest.TestCase):
 
 
 class TokscaleLaneTests(unittest.TestCase):
+    def setUp(self):
+        clear_tokscale_graph_cache()  # each test is its own collector run
+
     def test_name_is_tokscale(self):
         self.assertEqual(TokscaleLane().name, "tokscale")
 

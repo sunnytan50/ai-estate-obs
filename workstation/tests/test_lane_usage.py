@@ -1,4 +1,5 @@
 import json
+import os
 import tempfile
 import unittest
 from datetime import datetime
@@ -6,9 +7,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from aiobs_collector.lane_tokscale import _end_of_day_local_ms
+from aiobs_collector.lane_tokscale import TokscaleLane, _end_of_day_local_ms, clear_tokscale_graph_cache
 from aiobs_collector.lane_usage import (
-    FALLBACK, LEDGER_VERSION, TOKENS, VALUE, UsageLane, cumulative_samples, day_entries,
+    FALLBACK, LEDGER_VERSION, TOKENS, VALUE, UsageLane, _modified_since, cumulative_samples, day_entries,
     dump_ledger, load_ledger,
 )
 
@@ -127,8 +128,9 @@ class UsageLaneTests(unittest.TestCase):
     def collect(self, tokscale, state):
         lane = UsageLane()
         completed = SimpleNamespace(stdout=json.dumps(tokscale))
+        clear_tokscale_graph_cache()
         with patch("aiobs_collector.lane_usage.time.time", return_value=self.NOW), \
-                patch("aiobs_collector.lane_usage.subprocess.run", return_value=completed):
+                patch("aiobs_collector.lane_tokscale.subprocess.run", return_value=completed):
             samples = lane.collect(self.cfg, state)
         return lane, samples
 
@@ -171,13 +173,45 @@ class UsageLaneTests(unittest.TestCase):
     def test_a_day_tokscale_saw_but_transcripts_lack_is_not_frozen(self):
         tokscale = doc(("2026-10-01", [row("claude", "claude-opus-5-5", output=1_000, cost=1.0)]))
         lane = UsageLane()
+        clear_tokscale_graph_cache()
         with self.assertRaisesRegex(RuntimeError, "2026-10-01"):
             with patch("aiobs_collector.lane_usage.time.time", return_value=self.NOW), \
-                    patch("aiobs_collector.lane_usage.subprocess.run",
+                    patch("aiobs_collector.lane_tokscale.subprocess.run",
                           return_value=SimpleNamespace(stdout=json.dumps(tokscale))):
                 lane.collect(self.cfg, {})
         self.assertIsNone(getattr(lane, "state_data", None))
 
+
+class SharedTokscaleRunTests(unittest.TestCase):
+    def test_the_tokscale_and_usage_lanes_share_one_tokscale_run(self):
+        clear_tokscale_graph_cache()
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "claude").mkdir()
+            (Path(tmp) / "codex" / "sessions").mkdir(parents=True)
+            cfg = {"AIOBS_TOKSCALE_VERSION": "4.14.0", "AIOBS_CLAUDE_PROJECTS": str(Path(tmp) / "claude"),
+                   "AIOBS_CODEX_HOME": str(Path(tmp) / "codex")}
+            completed = SimpleNamespace(stdout=json.dumps(doc((DAY, [row("droid", "glm-5-2", input=1, cost=1.0)]))))
+            with patch("subprocess.run", return_value=completed) as run:
+                TokscaleLane().collect(cfg, {})
+                UsageLane().collect(cfg, {})
+        self.assertEqual(run.call_count, 1)
+
+
+class ModifiedSinceTests(unittest.TestCase):
+    def test_keeps_rollouts_written_at_or_after_the_cutoff(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / "sessions" / "2026" / "10"
+            folder.mkdir(parents=True)
+            old, new = folder / "old.jsonl", folder / "new.jsonl"
+            for path in (old, new, folder / "notes.txt"):
+                path.write_text("{}\n")
+            cutoff = datetime(2026, 10, 1).timestamp()
+            os.utime(old, (cutoff - 60, cutoff - 60))
+            os.utime(new, (cutoff, cutoff))
+            self.assertEqual([p.name for p in _modified_since(Path(tmp) / "sessions", cutoff)], ["new.jsonl"])
+            self.assertEqual(sorted(p.name for p in _modified_since(Path(tmp) / "sessions", None)),
+                             ["new.jsonl", "old.jsonl"])
+            self.assertEqual(_modified_since(Path(tmp) / "missing", cutoff), [])
 
 if __name__ == "__main__":
     unittest.main()

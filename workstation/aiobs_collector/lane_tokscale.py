@@ -173,6 +173,36 @@ def normalize_tokscale(doc: dict, now_ms: int) -> list[Sample]:
     return samples
 
 
+_GRAPH_CACHE: dict = {}
+
+
+def tokscale_graph(version: str) -> dict:
+    """The pinned `tokscale graph` document, run once per collector run.
+
+    The tokscale and usage lanes both read it in the same run; the collector
+    clears the cache at the start of each run (`clear_tokscale_graph_cache`),
+    so one subprocess serves both. Each caller gets its own parsed copy. A
+    failed run is not cached.
+    """
+    text = _GRAPH_CACHE.get(version)
+    if text is None:
+        # 300s (not the plan's original 120s): a cold tokscale cache build
+        # across a large real transcript history is slow on first run.
+        result = subprocess.run(
+            ["npx", "-y", f"tokscale@{version}", "graph", "--no-spinner"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=True,
+        )
+        text = _GRAPH_CACHE[version] = result.stdout
+    return json.loads(text)
+
+
+def clear_tokscale_graph_cache() -> None:
+    _GRAPH_CACHE.clear()
+
+
 class TokscaleLane:
     """Lane: client-side token/cost usage across AI coding assistants, via tokscale."""
 
@@ -185,16 +215,6 @@ class TokscaleLane:
                 "AIOBS_TOKSCALE_VERSION is not set -- run `npm view tokscale version` "
                 "and pin it in config/estate.env"
             )
-
-        # 300s (not the plan's original 120s): a cold tokscale cache build
-        # across a large real transcript history is slow on first run.
-        result = subprocess.run(
-            ["npx", "-y", f"tokscale@{version}", "graph", "--no-spinner"],
-            capture_output=True,
-            text=True,
-            timeout=300,
-            check=True,
-        )
-        doc = json.loads(result.stdout)
+        doc = tokscale_graph(version)
         now_ms = int(time.time() * 1000)
         return normalize_tokscale(doc, now_ms)

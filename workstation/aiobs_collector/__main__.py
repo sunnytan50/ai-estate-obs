@@ -40,7 +40,7 @@ from aiobs_collector.core import (
 from aiobs_collector.lane_openrouter import OpenRouterLane
 from aiobs_collector.lane_codex_speed import CodexSpeedLane, TOKENS, ALLOWANCE, CREDITS
 from aiobs_collector.lane_codex_limits import CodexLimitsLane, LIMIT_METRICS
-from aiobs_collector.lane_tokscale import TokscaleLane
+from aiobs_collector.lane_tokscale import TokscaleLane, clear_tokscale_graph_cache
 from aiobs_collector.lane_usage import USAGE_METRICS, UsageLane
 from aiobs_collector.monotonic import apply_monotonic, fetch_peaks, seed_offsets_from_peaks
 from aiobs_collector.push import push_samples
@@ -462,6 +462,7 @@ def main(argv=None) -> int:
             return 1
         print(f"aiobs_collector: collector state {requested_state}; collection skipped")
         return 0
+    clear_tokscale_graph_cache()  # the tokscale and usage lanes share one fresh run per cycle
     raw_samples, new_state = run_lanes(lanes, cfg, state, now_ms)
     if args.seed_offsets_from_vm:
         return _seed_offsets(args, cfg, state_dir, raw_samples, new_state)

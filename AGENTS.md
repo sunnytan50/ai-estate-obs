@@ -15,7 +15,7 @@ Rules for any agent (Claude, Droid, Codex) working in this repository. Global co
 - Dashboard dollars are API list-price value from the `usage` lane (`workstation/aiobs_collector/prices.py`). Never edit a price entry to correct the past; add a new entry with a later `since`. Frozen days are never re-pushed.
 
 ## Tests
-- Run the full suite from `workstation/` before any deploy: `python3 -m unittest discover -s tests` (337 tests on 2026-10-05). It must pass.
+- Run the full suite from `workstation/` before any deploy: `python3 -m unittest discover -s tests` (342 tests on 2026-10-05). It must pass.
 
 ## Deploy
 - Dashboards only: `rsync -az hub/grafana/dashboards/ remy-bot:/opt/observability/grafana/dashboards/`. Grafana re-reads provisioned files within ~10 s; no restart.

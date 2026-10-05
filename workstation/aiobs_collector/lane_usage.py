@@ -16,8 +16,6 @@ repricing, transcript clean-up, archived sessions or diagnostic-log rotation
 can never move them again. Yesterday and today are recomputed every run.
 """
 
-import json
-import subprocess
 import time
 from collections import defaultdict
 from datetime import date as Date, datetime, timedelta
@@ -27,7 +25,7 @@ from aiobs_collector.claude_usage import parse_claude_usage, transcript_paths
 from aiobs_collector.codex_usage import speed_tokens
 from aiobs_collector.core import Sample
 from aiobs_collector.lane_codex_speed import _cached_modes, read_modes
-from aiobs_collector.lane_tokscale import _end_of_day_local_ms, _local_date_str, _map_provider
+from aiobs_collector.lane_tokscale import _end_of_day_local_ms, _local_date_str, _map_provider, tokscale_graph
 from aiobs_collector.prices import normalize_model, rate_for, value_usd
 
 TOKENS = "aiobs_usage_tokens_total"
@@ -268,11 +266,7 @@ class UsageLane:
         if not (codex_root / "sessions").is_dir():
             raise RuntimeError(f"Codex session logs not found at {codex_root / 'sessions'}")
 
-        result = subprocess.run(
-            ["npx", "-y", f"tokscale@{version}", "graph", "--no-spinner"],
-            capture_output=True, text=True, timeout=300, check=True,
-        )
-        doc = json.loads(result.stdout)
+        doc = tokscale_graph(version)  # shared with the tokscale lane: one run per cycle
         claude = parse_claude_usage(transcript_paths(claude_root, since_ts), since_date)
         check_claude_coverage(doc, claude, since_date, cutoff)
         speed_state = state.get("lane:codex-speed:data")

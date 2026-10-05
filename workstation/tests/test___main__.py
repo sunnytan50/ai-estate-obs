@@ -801,8 +801,9 @@ class UsageGraceWindowTests(unittest.TestCase):
                 tokscale = {"contributions": [{"date": "2026-10-04", "clients": [
                     {"client": "droid", "modelId": "glm-5-2", "cost": cost_yesterday, "tokens": {"input": 1}}]}]}
                 lane = UsageLane()
+                main_mod.clear_tokscale_graph_cache()
                 with patch("aiobs_collector.lane_usage.time.time", return_value=now_ms / 1000), \
-                        patch("aiobs_collector.lane_usage.subprocess.run",
+                        patch("aiobs_collector.lane_tokscale.subprocess.run",
                               return_value=SimpleNamespace(stdout=json.dumps(tokscale))):
                     raw = lane.collect(cfg, state)
                 shaped, new_state = apply_monotonic(raw, {**state, "lane:usage:data": lane.state_data})

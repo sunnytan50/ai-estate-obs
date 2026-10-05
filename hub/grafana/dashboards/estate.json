@@ -482,7 +482,7 @@
             "uid": "vm"
           },
           "refId": "B",
-          "expr": "last_over_time(aiobs_codex_limit_resets_at_seconds{window=\"weekly\"}[2h] @ now()) - now()",
+          "expr": "(last_over_time(aiobs_codex_limit_resets_at_seconds{window=\"weekly\"}[2h] @ now()) - now()) > 0",
           "legendFormat": "resets in",
           "instant": true,
           "range": false

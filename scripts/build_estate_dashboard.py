@@ -210,7 +210,8 @@ def header_cards():
     # `@ now()` sits inside the window: VictoriaMetrics rounds an outer `f(m[w]) @ t` back to an earlier
     # grid point, which hid the reset time (its only samples are minutes old).
     used = f'last_over_time({LIMIT}{{window="weekly"}}[2h] @ now())'
-    resets = f'last_over_time({RESETS}{{window="weekly"}}[2h] @ now()) - now()'
+    # `> 0` hides a reset time that has already passed (the last sample stays in the window).
+    resets = f'(last_over_time({RESETS}{{window="weekly"}}[2h] @ now()) - now()) > 0'
     pipeline_map = [{"type": "value", "options": {"0": {"text": "✓ All up", "color": GOOD, "index": 0},
                                                   **{str(n): {"text": f"✕ {n} down", "color": BAD, "index": n}
                                                      for n in range(1, 7)}}}]

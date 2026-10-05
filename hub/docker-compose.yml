@@ -17,6 +17,8 @@ services:
       # interface binds to the tailnet only, so anonymous read access stays private to the tailnet
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      # the bare root URL opens the AI Estate dashboard for everyone, anonymous viewers included
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/estate.json
     volumes:
       - grafanadata:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

@@ -61,8 +61,17 @@ class RateTableTests(unittest.TestCase):
             self.assertEqual(normalize_model(raw), expected, raw)
 
     def test_models_without_an_official_rate_return_none(self):
-        for model in ("gpt-5.6-luna", "glm-5-2", "kimi-k3", "claude-opus-4-8", "codex-auto-review", "grok-4.6"):
+        for model in ("gpt-5.6-luna", "glm-5-2", "kimi-k3", "claude-opus-4-6", "codex-auto-review", "grok-4.6"):
             self.assertIsNone(rate_for(model, DAY), model)
+
+    def test_opus_4_8_and_4_7_follow_the_official_page(self):
+        # $5 / $25, cache read 0.1x; fast mode $10 / $50 on 4.8 only (fetched 2026-10-05)
+        for model in ("claude-opus-4-8", "claude-opus-4-7"):
+            rate = rate_for(model, DAY)
+            self.assertEqual((rate.input, rate.output), (5, 25), model)
+            self.assertAlmostEqual(rate.cache_read, 0.5)
+        self.assertEqual(rate_for("claude-opus-4-8", DAY).multiplier("fast"), 2.0)
+        self.assertEqual(rate_for("claude-opus-4-7", DAY).multiplier("fast"), 1.0)
 
     def test_since_picks_the_entry_in_force_that_day(self):
         table = {"m": (Rate(1, 1, 1, 1, 1, since="2026-01-01"), Rate(2, 2, 2, 2, 2, since="2026-10-01"))}

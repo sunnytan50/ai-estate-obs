@@ -147,6 +147,38 @@ def day_entries(doc: dict, claude: dict, codex_split: dict, since_date=None) -> 
     return result
 
 
+COVERAGE_FLOOR = 0.5
+
+
+def check_claude_coverage(doc: dict, claude: dict, first_day, last_day: str) -> None:
+    """Refuse to freeze days whose Claude Code transcripts look missing.
+
+    tokscale reads the same transcript files, so a day where it sees Claude
+    Code usage and the transcripts give under COVERAGE_FLOOR of it means a
+    source problem (wrong path, permissions, a moved folder). A frozen day is
+    never recomputed, so the run fails instead (lane_up=0) and freezes nothing.
+    On real history the two agree within 1.5% per closed day (2026-10-05).
+    """
+    seen = defaultdict(float)
+    for (day, _model, _speed), tokens in claude.items():
+        seen[day] += sum(tokens.values())
+    expected = defaultdict(float)
+    contributions = doc.get("contributions") if isinstance(doc, dict) else None
+    for day_doc in contributions if isinstance(contributions, list) else []:
+        day = day_doc.get("date") if isinstance(day_doc, dict) else None
+        if not isinstance(day, str) or day > last_day or (first_day is not None and day < first_day):
+            continue
+        rows = day_doc.get("clients")
+        for row in rows if isinstance(rows, list) else []:
+            if isinstance(row, dict) and row.get("client") == "claude":
+                kinds = _tokens(row)
+                expected[day] += kinds["input"] + kinds["output"] + kinds["cache_read"] + kinds["cache_write"]
+    for day, tokens in sorted(expected.items()):
+        if tokens > 0 and seen.get(day, 0.0) < COVERAGE_FLOOR * tokens:
+            raise RuntimeError(f"Claude Code transcripts hold {seen.get(day, 0.0):,.0f} of tokscale's "
+                               f"{tokens:,.0f} tokens for {day}; refusing to freeze that day")
+
+
 def load_ledger(data) -> dict:
     """The frozen days from lane state. Anything unreadable, or another
     LEDGER_VERSION, starts over (a rebuild from the sources)."""
@@ -228,14 +260,21 @@ class UsageLane:
         since_date = None if through is None else (Date.fromisoformat(through) + timedelta(days=1)).isoformat()
         since_ts = None if since_date is None else datetime.fromisoformat(since_date).timestamp()
 
+        # A frozen day is never recomputed: a missing source must fail the run, not freeze empty days.
+        claude_root = Path(cfg.get("AIOBS_CLAUDE_PROJECTS") or "~/.claude/projects").expanduser()
+        if not claude_root.is_dir():
+            raise RuntimeError(f"Claude Code transcripts not found at {claude_root}")
+        codex_root = Path(cfg.get("AIOBS_CODEX_HOME") or "~/.codex").expanduser()
+        if not (codex_root / "sessions").is_dir():
+            raise RuntimeError(f"Codex session logs not found at {codex_root / 'sessions'}")
+
         result = subprocess.run(
             ["npx", "-y", f"tokscale@{version}", "graph", "--no-spinner"],
             capture_output=True, text=True, timeout=300, check=True,
         )
         doc = json.loads(result.stdout)
-        claude_root = cfg.get("AIOBS_CLAUDE_PROJECTS") or "~/.claude/projects"
         claude = parse_claude_usage(transcript_paths(claude_root, since_ts), since_date)
-        codex_root = Path(cfg.get("AIOBS_CODEX_HOME") or "~/.codex").expanduser()
+        check_claude_coverage(doc, claude, since_date, cutoff)
         speed_state = state.get("lane:codex-speed:data")
         cached = speed_state.get("modes") if isinstance(speed_state, dict) else None
         database = codex_root / "logs_2.sqlite"

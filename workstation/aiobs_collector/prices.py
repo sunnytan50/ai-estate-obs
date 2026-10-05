@@ -61,6 +61,8 @@ TABLE = {
     "claude-haiku-4-5": (_anthropic(1, 5),),
     "claude-fable-5": (_anthropic(10, 50),),
     "claude-opus-5": (_anthropic(5, 25, fast=2.0),),
+    "claude-opus-4-8": (_anthropic(5, 25, fast=2.0),),  # fast $10/$50
+    "claude-opus-4-7": (_anthropic(5, 25),),  # no fast mode
     "claude-sonnet-5": (_anthropic(2, 10),),
     "claude-sonnet-4-5": (_anthropic(3, 15),),
     "claude-haiku-3-5": (_anthropic(0.8, 4),),

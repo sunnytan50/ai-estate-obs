@@ -758,5 +758,61 @@ class NewLaneWiringTests(unittest.TestCase):
             self.assertEqual(main_mod._lane_for_sample(sample), "codex-limits", metric)
 
 
+class UsageGraceWindowTests(unittest.TestCase):
+    """The usage lane recomputes yesterday until it freezes; a correction must reach yesterday's point."""
+
+    TODAY0 = _local_ms(2026, 10, 5, 0, 0, 0)
+    YESTERDAY_END = _local_ms(2026, 10, 4, 23, 59, 59) + 999
+    DAY_BEFORE_END = _local_ms(2026, 10, 3, 23, 59, 59) + 999
+
+    @staticmethod
+    def value(metric, value, ts_ms):
+        return Sample(metric=metric, labels={"provider": "codex", "model": "m", "origin": "client"},
+                      value=value, ts_ms=ts_ms)
+
+    def test_a_recomputed_yesterday_is_pushed_again(self):
+        first = [self.value("aiobs_list_value_usd_total", 1.0, self.YESTERDAY_END)]
+        state = main_mod.compute_push_state(first, {}, self.TODAY0 + 5 * 60_000)
+        second = [self.value("aiobs_list_value_usd_total", 5.0, self.YESTERDAY_END)]
+        pushed = main_mod.filter_for_push(second, state, self.TODAY0 + 15 * 60_000, backfill=False)
+        self.assertEqual([s.value for s in pushed], [5.0])
+
+    def test_older_usage_days_and_other_lanes_keep_the_high_water_rule(self):
+        state = main_mod.compute_push_state([self.value("aiobs_list_value_usd_total", 1.0, self.YESTERDAY_END),
+                                             self.value("aiobs_tokens_total", 1.0, self.YESTERDAY_END)],
+                                            {}, self.TODAY0 + 5 * 60_000)
+        later = [self.value("aiobs_list_value_usd_total", 9.0, self.DAY_BEFORE_END),
+                 self.value("aiobs_tokens_total", 2.0, self.YESTERDAY_END)]
+        pushed = main_mod.filter_for_push(later, state, self.TODAY0 + 15 * 60_000, backfill=False)
+        self.assertEqual(pushed, [])
+
+    def test_midnight_rollover_through_the_real_lane_and_harness(self):
+        # usage lane -> apply_monotonic -> filter_for_push -> compute_push_state, across midnight.
+        from types import SimpleNamespace
+        from aiobs_collector.lane_usage import UsageLane, VALUE
+        from aiobs_collector.monotonic import apply_monotonic
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "claude").mkdir()
+            (Path(tmp) / "codex" / "sessions").mkdir(parents=True)
+            cfg = {"AIOBS_TOKSCALE_VERSION": "4.14.0", "AIOBS_CLAUDE_PROJECTS": str(Path(tmp) / "claude"),
+                   "AIOBS_CODEX_HOME": str(Path(tmp) / "codex")}
+
+            def run(cost_yesterday, now_ms, state):
+                tokscale = {"contributions": [{"date": "2026-10-04", "clients": [
+                    {"client": "droid", "modelId": "glm-5-2", "cost": cost_yesterday, "tokens": {"input": 1}}]}]}
+                lane = UsageLane()
+                with patch("aiobs_collector.lane_usage.time.time", return_value=now_ms / 1000), \
+                        patch("aiobs_collector.lane_usage.subprocess.run",
+                              return_value=SimpleNamespace(stdout=json.dumps(tokscale))):
+                    raw = lane.collect(cfg, state)
+                shaped, new_state = apply_monotonic(raw, {**state, "lane:usage:data": lane.state_data})
+                pushed = main_mod.filter_for_push(shaped, state, now_ms, backfill=False)
+                return pushed, main_mod.compute_push_state(raw, new_state, now_ms)
+
+            pushed, state = run(1.0, self.TODAY0 + 5 * 60_000, {})
+            self.assertIn(1.0, [s.value for s in pushed if s.metric == VALUE and s.ts_ms == self.YESTERDAY_END])
+            pushed, state = run(4.0, self.TODAY0 + 15 * 60_000, state)
+            self.assertIn(4.0, [s.value for s in pushed if s.metric == VALUE and s.ts_ms == self.YESTERDAY_END])
+
 if __name__ == "__main__":
     unittest.main()

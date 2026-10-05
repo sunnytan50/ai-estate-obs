@@ -39,13 +39,13 @@ class DayEntriesTests(unittest.TestCase):
 
     def test_tokscale_claude_rows_only_price_models_the_table_lacks(self):
         claude = {(DAY, "claude-opus-5-5", "standard"): claude_bucket(output=1_000_000),
-                  (DAY, "claude-opus-4-8", "standard"): claude_bucket(output=10)}
+                  (DAY, "claude-legacy-9", "standard"): claude_bucket(output=10)}
         tokscale = doc((DAY, [row("claude", "claude-opus-5-5", output=1_000_000, cost=999.0),
-                              row("claude", "claude-opus-4-8", output=10, cost=3.5)]))
+                              row("claude", "claude-legacy-9", output=10, cost=3.5)]))
         entry = day_entries(tokscale, claude, {})[DAY]
         self.assertAlmostEqual(entry[(VALUE, "claude-code", "claude-opus-5-5", "")], 20.0)  # table, not 999
-        self.assertEqual(entry[(VALUE, "claude-code", "claude-opus-4-8", "")], 3.5)
-        self.assertEqual(entry[(FALLBACK, "claude-code", "claude-opus-4-8", "")], 3.5)
+        self.assertEqual(entry[(VALUE, "claude-code", "claude-legacy-9", "")], 3.5)
+        self.assertEqual(entry[(FALLBACK, "claude-code", "claude-legacy-9", "")], 3.5)
         self.assertEqual(entry[(TOKENS, "claude-code", "claude-opus-5-5", "output")], 1_000_000)  # not doubled
 
     def test_codex_output_includes_reasoning_and_speed_shares_apply(self):
@@ -118,6 +118,9 @@ class UsageLaneTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         root = Path(self.tmp.name)
+        (root / "claude").mkdir()
+        (root / "codex" / "sessions").mkdir(parents=True)
+        self.root = root
         self.cfg = {"AIOBS_TOKSCALE_VERSION": "4.14.0", "AIOBS_CLAUDE_PROJECTS": str(root / "claude"),
                     "AIOBS_CODEX_HOME": str(root / "codex")}
 
@@ -153,6 +156,27 @@ class UsageLaneTests(unittest.TestCase):
     def test_requires_a_pinned_tokscale_version(self):
         with self.assertRaises(RuntimeError):
             UsageLane().collect({}, {})
+
+    def test_a_missing_transcript_folder_fails_instead_of_freezing(self):
+        # A frozen day is never recomputed, so a wrong path must fail the run, not freeze empty days.
+        self.cfg["AIOBS_CLAUDE_PROJECTS"] = str(self.root / "nowhere")
+        with self.assertRaisesRegex(RuntimeError, "Claude Code transcripts"):
+            self.collect(doc(), {})
+
+    def test_missing_codex_session_logs_fail_the_run(self):
+        self.cfg["AIOBS_CODEX_HOME"] = str(self.root / "nowhere")
+        with self.assertRaisesRegex(RuntimeError, "Codex session logs"):
+            self.collect(doc(), {})
+
+    def test_a_day_tokscale_saw_but_transcripts_lack_is_not_frozen(self):
+        tokscale = doc(("2026-10-01", [row("claude", "claude-opus-5-5", output=1_000, cost=1.0)]))
+        lane = UsageLane()
+        with self.assertRaisesRegex(RuntimeError, "2026-10-01"):
+            with patch("aiobs_collector.lane_usage.time.time", return_value=self.NOW), \
+                    patch("aiobs_collector.lane_usage.subprocess.run",
+                          return_value=SimpleNamespace(stdout=json.dumps(tokscale))):
+                lane.collect(self.cfg, {})
+        self.assertIsNone(getattr(lane, "state_data", None))
 
 
 if __name__ == "__main__":

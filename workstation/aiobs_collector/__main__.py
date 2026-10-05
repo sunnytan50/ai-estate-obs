@@ -64,6 +64,9 @@ _KNOWN_LANES = {"tokscale": TokscaleLane, "openrouter": OpenRouterLane,
 # past-day dedupe filter below.
 _ALWAYS_PUSH_METRICS = {"aiobs_lane_up", "aiobs_lane_last_success_timestamp"}
 
+# Lanes whose yesterday is recomputed every run until it freezes (see filter_for_push).
+_GRACE_LANES = {"usage"}
+
 
 class ConfigError(Exception):
     """A user-facing configuration problem. Caught by main(); exits 2."""
@@ -168,11 +171,18 @@ def filter_for_push(samples: list, state: dict, now_ms: int, backfill: bool) -> 
     a lane (no `provider` label, and not one of the always-push metrics) is
     included defensively rather than silently dropped -- keeping the state
     small is a volume optimization, never an excuse to lose data.
+
+    Lanes in `_GRACE_LANES` recompute yesterday until it freezes (the usage
+    lane's ledger), so their yesterday is always re-pushed too: a late
+    correction then lands on yesterday's own point instead of today's bar.
+    VictoriaMetrics keeps the higher of two values at one timestamp, so the
+    re-push can only raise yesterday's point.
     """
     if backfill:
         return list(samples)
 
     today_start_ms = _local_midnight_ms(now_ms)
+    yesterday_start_ms = _local_midnight_ms(today_start_ms - 1)
     counts, _max_ts = _past_day_tallies(samples, today_start_ms)
 
     selected = []
@@ -181,7 +191,7 @@ def filter_for_push(samples: list, state: dict, now_ms: int, backfill: bool) -> 
             selected.append(sample)
             continue
         lane = _lane_for_sample(sample)
-        if lane is None:
+        if lane is None or (lane in _GRACE_LANES and sample.ts_ms >= yesterday_start_ms):
             selected.append(sample)
             continue
         high_water_ts = state.get(f"push:{lane}:max_ts_ms")

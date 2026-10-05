@@ -742,5 +742,21 @@ class MainEntrypointTests(unittest.TestCase):
         self.assertEqual(len(lane_up_zero), 1)
 
 
+class NewLaneWiringTests(unittest.TestCase):
+    def test_usage_and_codex_limits_lanes_are_known(self):
+        lanes = main_mod._build_lanes({"AIOBS_LANES": "usage,codex-limits"})
+        self.assertEqual([lane.name for lane in lanes], ["usage", "codex-limits"])
+
+    def test_new_metrics_map_to_their_lanes(self):
+        for metric in ("aiobs_usage_tokens_total", "aiobs_list_value_usd_total",
+                       "aiobs_list_value_fallback_usd_total"):
+            sample = Sample(metric=metric, labels={"provider": "codex"}, value=1.0, ts_ms=1)
+            self.assertEqual(main_mod._lane_for_sample(sample), "usage", metric)
+        for metric in ("aiobs_codex_limit_used_ratio", "aiobs_codex_credits_balance",
+                       "aiobs_codex_limit_resets_at_seconds", "aiobs_codex_limit_observed_at_seconds"):
+            sample = Sample(metric=metric, labels={}, value=1.0, ts_ms=1)
+            self.assertEqual(main_mod._lane_for_sample(sample), "codex-limits", metric)
+
+
 if __name__ == "__main__":
     unittest.main()

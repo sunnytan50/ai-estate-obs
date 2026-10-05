@@ -39,7 +39,9 @@ from aiobs_collector.core import (
 )
 from aiobs_collector.lane_openrouter import OpenRouterLane
 from aiobs_collector.lane_codex_speed import CodexSpeedLane, TOKENS, ALLOWANCE, CREDITS
+from aiobs_collector.lane_codex_limits import CodexLimitsLane, LIMIT_METRICS
 from aiobs_collector.lane_tokscale import TokscaleLane
+from aiobs_collector.lane_usage import USAGE_METRICS, UsageLane
 from aiobs_collector.monotonic import apply_monotonic, fetch_peaks, seed_offsets_from_peaks
 from aiobs_collector.push import push_samples
 from aiobs_collector.receipt import (
@@ -53,7 +55,8 @@ from aiobs_collector.receipt import (
 # Both TokscaleLane and OpenRouterLane take no constructor args -- cfg is
 # passed later, to .collect(cfg, state), not to __init__.
 _KNOWN_LANES = {"tokscale": TokscaleLane, "openrouter": OpenRouterLane,
-                "codex-speed": CodexSpeedLane}
+                "codex-speed": CodexSpeedLane, "usage": UsageLane,
+                "codex-limits": CodexLimitsLane}
 
 # These two are the run_lanes harness's own self-health samples (Task 8):
 # always timestamped `now_ms` on every run, never part of a lane's day-
@@ -100,7 +103,9 @@ def _lane_for_sample(sample) -> "str | None":
     per-lane push-dedupe state.
 
     Codex speed metrics belong to their own lane, independently of tokscale's
-    existing Codex series. `openrouter` always labels its own samples
+    existing Codex series, as do the usage lane's token/value metrics and the
+    codex-limits gauges (matched by metric name, before any provider label).
+    `openrouter` always labels its own samples
     `provider="openrouter"` -- a lane-specific constant never emitted by
     tokscale's client-name mapping/sanitizer (see lane_tokscale.py's
     `_map_provider`/`_sanitize_provider`: no real coding-assistant client is
@@ -112,6 +117,10 @@ def _lane_for_sample(sample) -> "str | None":
     """
     if sample.metric in {TOKENS, ALLOWANCE, CREDITS}:
         return "codex-speed"
+    if sample.metric in USAGE_METRICS:
+        return "usage"
+    if sample.metric in LIMIT_METRICS:
+        return "codex-limits"
     provider = sample.labels.get("provider")
     if provider is None:
         return None

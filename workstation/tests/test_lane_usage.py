@@ -135,7 +135,7 @@ class UsageLaneTests(unittest.TestCase):
         completed = SimpleNamespace(stdout=json.dumps(tokscale))
         clear_tokscale_graph_cache()
         with patch("aiobs_collector.lane_usage.time.time", return_value=self.NOW), \
-                patch("aiobs_collector.lane_tokscale.subprocess.run", return_value=completed):
+                patch("aiobs_collector.lane_tokscale.run_tokscale", return_value=completed):
             samples = lane.collect(self.cfg, state)
         return lane, samples
 
@@ -181,7 +181,7 @@ class UsageLaneTests(unittest.TestCase):
         clear_tokscale_graph_cache()
         with self.assertRaisesRegex(RuntimeError, "2026-10-01"):
             with patch("aiobs_collector.lane_usage.time.time", return_value=self.NOW), \
-                    patch("aiobs_collector.lane_tokscale.subprocess.run",
+                    patch("aiobs_collector.lane_tokscale.run_tokscale",
                           return_value=SimpleNamespace(stdout=json.dumps(tokscale))):
                 lane.collect(self.cfg, {})
         self.assertIsNone(getattr(lane, "state_data", None))
@@ -196,7 +196,7 @@ class SharedTokscaleRunTests(unittest.TestCase):
             cfg = {"AIOBS_TOKSCALE_VERSION": "4.14.0", "AIOBS_CLAUDE_PROJECTS": str(Path(tmp) / "claude"),
                    "AIOBS_CODEX_HOME": str(Path(tmp) / "codex")}
             completed = SimpleNamespace(stdout=json.dumps(doc((DAY, [row("droid", "glm-5-2", input=1, cost=1.0)]))))
-            with patch("subprocess.run", return_value=completed) as run:
+            with patch("aiobs_collector.lane_tokscale.run_tokscale", return_value=completed) as run:
                 TokscaleLane().collect(cfg, {})
                 UsageLane().collect(cfg, {})
         self.assertEqual(run.call_count, 1)

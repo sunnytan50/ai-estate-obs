@@ -407,34 +407,17 @@ class TokscaleLaneTests(unittest.TestCase):
 
     def test_missing_version_raises_clear_error_without_shelling_out(self):
         lane = TokscaleLane()
-        with patch("aiobs_collector.lane_tokscale.subprocess.run") as mock_run:
+        with patch("aiobs_collector.lane_tokscale.run_tokscale") as mock_run:
             with self.assertRaisesRegex(RuntimeError, "AIOBS_TOKSCALE_VERSION"):
                 lane.collect(cfg={}, state={})
             mock_run.assert_not_called()
 
     def test_empty_string_version_raises_clear_error(self):
         lane = TokscaleLane()
-        with patch("aiobs_collector.lane_tokscale.subprocess.run") as mock_run:
+        with patch("aiobs_collector.lane_tokscale.run_tokscale") as mock_run:
             with self.assertRaisesRegex(RuntimeError, "AIOBS_TOKSCALE_VERSION"):
                 lane.collect(cfg={"AIOBS_TOKSCALE_VERSION": "   "}, state={})
             mock_run.assert_not_called()
-
-    def test_collect_shells_out_to_pinned_npx_tokscale_graph(self):
-        lane = TokscaleLane()
-        fixture_text = json.dumps(_load_fixture())
-        completed = subprocess.CompletedProcess(
-            args=["npx"], returncode=0, stdout=fixture_text, stderr=""
-        )
-        with patch("aiobs_collector.lane_tokscale.subprocess.run", return_value=completed) as mock_run:
-            lane.collect(cfg={"AIOBS_TOKSCALE_VERSION": "4.14.0"}, state={})
-
-        mock_run.assert_called_once()
-        args, kwargs = mock_run.call_args
-        self.assertEqual(args[0], ["npx", "-y", "tokscale@4.14.0", "graph", "--no-spinner"])
-        self.assertEqual(kwargs.get("timeout"), 300)
-        self.assertTrue(kwargs.get("capture_output") or kwargs.get("stdout") is not None)
-        self.assertTrue(kwargs.get("text", kwargs.get("universal_newlines", False)))
-        self.assertTrue(kwargs.get("check", False))
 
     def test_collect_returns_normalized_samples_matching_pure_function(self):
         lane = TokscaleLane()
@@ -444,7 +427,7 @@ class TokscaleLaneTests(unittest.TestCase):
             args=["npx"], returncode=0, stdout=fixture_text, stderr=""
         )
         fixed_now_ms = _local_ms(2026, 8, 25, 10, 0, 0)
-        with patch("aiobs_collector.lane_tokscale.subprocess.run", return_value=completed):
+        with patch("aiobs_collector.lane_tokscale.run_tokscale", return_value=completed):
             with patch("aiobs_collector.lane_tokscale.time.time", return_value=fixed_now_ms / 1000.0):
                 samples = lane.collect(cfg={"AIOBS_TOKSCALE_VERSION": "4.14.0"}, state={})
 
@@ -456,7 +439,7 @@ class TokscaleLaneTests(unittest.TestCase):
         # must let a bad exit code surface as an exception, not swallow it.
         lane = TokscaleLane()
         with patch(
-            "aiobs_collector.lane_tokscale.subprocess.run",
+            "aiobs_collector.lane_tokscale.run_tokscale",
             side_effect=subprocess.CalledProcessError(1, ["npx"]),
         ):
             with self.assertRaises(subprocess.CalledProcessError):
@@ -465,7 +448,7 @@ class TokscaleLaneTests(unittest.TestCase):
     def test_collect_propagates_timeout(self):
         lane = TokscaleLane()
         with patch(
-            "aiobs_collector.lane_tokscale.subprocess.run",
+            "aiobs_collector.lane_tokscale.run_tokscale",
             side_effect=subprocess.TimeoutExpired(cmd=["npx"], timeout=300),
         ):
             with self.assertRaises(subprocess.TimeoutExpired):
@@ -474,7 +457,7 @@ class TokscaleLaneTests(unittest.TestCase):
     def test_collect_propagates_bad_json(self):
         lane = TokscaleLane()
         completed = subprocess.CompletedProcess(args=["npx"], returncode=0, stdout="not json", stderr="")
-        with patch("aiobs_collector.lane_tokscale.subprocess.run", return_value=completed):
+        with patch("aiobs_collector.lane_tokscale.run_tokscale", return_value=completed):
             with self.assertRaises(json.JSONDecodeError):
                 lane.collect(cfg={"AIOBS_TOKSCALE_VERSION": "4.14.0"}, state={})
 

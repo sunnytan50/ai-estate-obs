@@ -1,6 +1,6 @@
 """tokscale lane: client-side AI coding-assistant token/cost usage.
 
-Shells out to the pinned `tokscale` CLI (via `npx`) for its day-granular
+Shells out to the pinned `tokscale` CLI (installed native binary) for its day-granular
 contribution-graph export, then normalizes that into `Sample`s per the
 frozen metric contract (spec section 5):
 
@@ -27,11 +27,11 @@ text once `--no-spinner` suppresses the progress UI).
 
 import json
 import re
-import subprocess
 import time
 from datetime import datetime
 
 from aiobs_collector.core import Sample
+from aiobs_collector.tokscale_runtime import run_tokscale
 
 # tokscale client name -> canonical provider label (spec: providers mapped
 # to claude-code, codex, cursor, droid, hermes). Any other client tokscale
@@ -186,15 +186,7 @@ def tokscale_graph(version: str) -> dict:
     """
     text = _GRAPH_CACHE.get(version)
     if text is None:
-        # 300s (not the plan's original 120s): a cold tokscale cache build
-        # across a large real transcript history is slow on first run.
-        result = subprocess.run(
-            ["npx", "-y", f"tokscale@{version}", "graph", "--no-spinner"],
-            capture_output=True,
-            text=True,
-            timeout=300,
-            check=True,
-        )
+        result = run_tokscale(version)
         text = _GRAPH_CACHE[version] = result.stdout
     return json.loads(text)
 

@@ -803,7 +803,7 @@ class UsageGraceWindowTests(unittest.TestCase):
                 lane = UsageLane()
                 main_mod.clear_tokscale_graph_cache()
                 with patch("aiobs_collector.lane_usage.time.time", return_value=now_ms / 1000), \
-                        patch("aiobs_collector.lane_tokscale.subprocess.run",
+                        patch("aiobs_collector.lane_tokscale.run_tokscale",
                               return_value=SimpleNamespace(stdout=json.dumps(tokscale))):
                     raw = lane.collect(cfg, state)
                 shaped, new_state = apply_monotonic(raw, {**state, "lane:usage:data": lane.state_data})

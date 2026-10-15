@@ -25,3 +25,6 @@ Rules for any agent (Claude, Droid, Codex) working in this repository. Global co
 
 ## Git
 - Commits and pushes each need the owner's explicit go. Commit by explicit pathspec.
+
+## Owner decisions
+- 2026-10-14: Recheck and stop the identified stuck home-wide search and orphaned tokscale processes; fix whole-process-group timeout cleanup and use the installed pinned tokscale binary; verify live dashboard lane recovery. Leave all code changes uncommitted.

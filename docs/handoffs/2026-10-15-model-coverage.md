@@ -22,7 +22,7 @@ Deliberately still "estimate": `deepseek-v4-1-flash` (DeepSeek prices by time of
 - The collector's own Codex reader (`_modified_since`) also matches only `*.jsonl`. Fine while compression lags the freeze; if Codex starts compressing within 2 days, live days would lose Codex tokens.
 
 ## Open owner decisions
-- Hub disk is 90% full (7.4 GB free of 75 GB). VictoriaMetrics turns read-only below 3 GB free (`-storage.minFreeDiskSpaceBytes=3GB`), which would freeze the dashboard. Its own data is only 14 MB; the space is twelve tagged Open WebUI images from another service on the same host (production plus rollback tags, 6.5–7 GB each, shared layers) and a 14.3 GB build cache. Nothing large grew in the last 14 days, so the risk is that service's next image build. Pruning its old rollback images is the owner's call; nothing was deleted here (a separate session took it up on 2026-10-15).
+- Correction, later on 2026-10-15: the hub's root disk was never a dashboard risk. VictoriaMetrics' data and the whole Docker root live on the separate data disk (`/dev/sdb`, 67 GB free), so `-storage.minFreeDiskSpaceBytes=3GB` applies to that disk. The 14 MB measured earlier was a stale copy under the root disk's default `/var/lib/docker`. Before judging disk risk, find a container's real data path with `docker inspect` (Mounts) and `findmnt -T`. The root disk itself was 90% full; a separate session has since cleaned it to 46%.
 - None on git: all three change sets were committed separately and pushed on 2026-10-15 after a public-repo scrub (each commit passes the full suite on its own: 344, 347, 351 tests).
 
 ## Next step

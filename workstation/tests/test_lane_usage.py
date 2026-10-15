@@ -30,6 +30,11 @@ def claude_bucket(input=0, output=0, cache_read=0, w5m=0, w1h=0):
 
 
 class DayEntriesTests(unittest.TestCase):
+    def test_haiku_daily_aggregate_without_context_is_labelled_estimated(self):
+        entry = day_entries(doc(("2026-10-07", [row("droid", "claude-haiku-5-5", output=100, cost=0.02)])), {}, {})["2026-10-07"]
+        self.assertEqual(entry[(VALUE, "droid", "claude-haiku-5-5", "")], 0.02)
+        self.assertEqual(entry[(FALLBACK, "droid", "claude-haiku-5-5", "")], 0.02)
+
     def test_claude_code_is_valued_from_transcripts_with_one_hour_writes(self):
         claude = {(DAY, "claude-opus-5-5", "standard"): claude_bucket(2, 100, 1000, 100, 200)}
         entry = day_entries(doc(), claude, {})[DAY]

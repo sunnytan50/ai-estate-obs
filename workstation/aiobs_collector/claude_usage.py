@@ -12,6 +12,8 @@ import os
 import re
 from datetime import datetime
 
+from aiobs_collector.prices import rate_for
+
 KINDS = ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h")
 _DATE_SUFFIX = re.compile(r"-\d{8}$")  # "claude-sonnet-4-5-20250929" -> tokscale's "claude-sonnet-4-5"
 
@@ -92,9 +94,16 @@ def parse_claude_usage(paths, since_date=None) -> dict:
         one_hour = min(_count(split.get("ephemeral_1h_input_tokens")), written)
         speed = "fast" if usage.get("speed") == "fast" else "standard"
         bucket = totals.setdefault((date, _DATE_SUFFIX.sub("", model), speed), dict.fromkeys(KINDS, 0))
-        bucket["input"] += _count(usage.get("input_tokens"))
-        bucket["output"] += _count(usage.get("output_tokens"))
-        bucket["cache_read"] += _count(usage.get("cache_read_input_tokens"))
-        bucket["cache_write_5m"] += written - one_hour
-        bucket["cache_write_1h"] += one_hour
+        counts = {"input": _count(usage.get("input_tokens")),
+                  "output": _count(usage.get("output_tokens")),
+                  "cache_read": _count(usage.get("cache_read_input_tokens")),
+                  "cache_write_5m": written - one_hour, "cache_write_1h": one_hour}
+        rate = rate_for(model, date)
+        prompt_tokens = counts["input"] + counts["cache_read"] + written
+        long_context = rate and rate.long_context_threshold and prompt_tokens > rate.long_context_threshold
+        for kind, count in counts.items():
+            bucket[kind] += count
+            if long_context:
+                premium_key = "long_context_" + kind
+                bucket[premium_key] = bucket.get(premium_key, 0) + count
     return totals

@@ -49,6 +49,25 @@ class ClaudeUsageTests(unittest.TestCase):
         bucket = self.parse()[("2026-10-02", "claude-opus-5-5", "standard")]
         self.assertEqual((bucket["cache_write_5m"], bucket["cache_write_1h"]), (300, 0))
 
+    def test_haiku_context_tiers_and_deduplication(self):
+        from aiobs_collector.lane_usage import day_entries, TOKENS, VALUE
+        base = {"input_tokens": 1, "output_tokens": 20, "cache_read_input_tokens": 99998,
+                "cache_creation_input_tokens": 1}
+        records = [assistant(msg_id="a", req="a", model="claude-haiku-5-5", when="2026-10-07T12:00:00Z", usage=base),
+                   assistant(msg_id="b", req="b", model="claude-haiku-5-5", when="2026-10-07T12:00:00Z",
+                             usage={**base, "input_tokens": 2})]
+        self.write(records + [records[1]])
+        totals = self.parse()
+        bucket = totals[("2026-10-07", "claude-haiku-5-5", "standard")]
+        self.assertEqual(bucket["input"], 3)
+        self.assertEqual(bucket["long_context_input"], 2)
+        self.assertEqual(bucket["long_context_cache_read"], 99998)
+        entry = day_entries({}, totals, {})["2026-10-07"]
+        standard = (0.1 + 20 * 0.5 + 99998 * 0.01 + 0.125) / 1e6
+        premium = (2 * 0.1 + 20 * 0.5 + 99998 * 0.01 + 0.125) * 5 / 1e6
+        self.assertAlmostEqual(entry[(VALUE, "claude-code", "claude-haiku-5-5", "")], standard + premium)
+        self.assertEqual(entry[(TOKENS, "claude-code", "claude-haiku-5-5", "input")], 3)
+
     def test_fast_mode_is_kept_apart(self):
         self.write([assistant(), assistant(msg_id="msg_2", req="req_2", usage={**USAGE, "speed": "fast"})])
         totals = self.parse()

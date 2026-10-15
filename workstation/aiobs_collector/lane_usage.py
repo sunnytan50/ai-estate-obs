@@ -21,7 +21,7 @@ from collections import defaultdict
 from datetime import date as Date, datetime, timedelta
 from pathlib import Path
 
-from aiobs_collector.claude_usage import parse_claude_usage, transcript_paths
+from aiobs_collector.claude_usage import KINDS, parse_claude_usage, transcript_paths
 from aiobs_collector.codex_usage import speed_tokens
 from aiobs_collector.core import Sample
 from aiobs_collector.lane_codex_speed import _cached_modes, read_modes
@@ -120,7 +120,8 @@ def day_entries(doc: dict, claude: dict, codex_split: dict, since_date=None) -> 
             for kind, count in kinds.items():
                 entry[(TOKENS, provider, model, kind)] += count
             rate = rate_for(model, day)
-            if rate is None:
+            # Daily aggregates cannot establish a request-level context tier.
+            if rate is None or rate.long_context_threshold:
                 if cost:
                     entry[(VALUE, provider, model, "")] += cost
                     entry[(FALLBACK, provider, model, "")] += cost
@@ -159,7 +160,7 @@ def check_claude_coverage(doc: dict, claude: dict, first_day, last_day: str) -> 
     """
     seen = defaultdict(float)
     for (day, _model, _speed), tokens in claude.items():
-        seen[day] += sum(tokens.values())
+        seen[day] += sum(tokens.get(kind, 0) for kind in KINDS)
     expected = defaultdict(float)
     contributions = doc.get("contributions") if isinstance(doc, dict) else None
     for day_doc in contributions if isinstance(contributions, list) else []:

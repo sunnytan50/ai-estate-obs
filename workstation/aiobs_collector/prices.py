@@ -31,6 +31,8 @@ class Rate:
     cache_write_1h: float
     speed_multipliers: tuple = ()  # e.g. (("fast", 2.0), ("ultrafast", 6.0))
     since: str = "2000-01-01"
+    long_context_threshold: int = 0
+    long_context_multiplier: float = 1.0
 
     def multiplier(self, speed: str) -> float:
         """Price multiplier for a speed tier; standard, unknown or unlisted -> 1.0."""
@@ -58,6 +60,11 @@ TABLE = {
     "claude-mythos-5-1": (_anthropic(10, 50, read=0.025),),
     "claude-opus-5-5": (_anthropic(4, 20, read=0.05, fast=2.0),),
     "claude-sonnet-5-5": (_anthropic(2, 10),),
+    # Haiku 5.5 official overview/pricing fetched 2026-10-07.
+    # All token categories cost 5x when the request prompt exceeds 100K.
+    "claude-haiku-5-5": (Rate(0.10, 0.50, 0.01, 0.125, 0.20,
+                                since="2026-10-07", long_context_threshold=100_000,
+                                long_context_multiplier=5.0),),
     "claude-haiku-4-5": (_anthropic(1, 5),),
     "claude-fable-5": (_anthropic(10, 50),),
     "claude-opus-5": (_anthropic(5, 25, fast=2.0),),
@@ -121,4 +128,8 @@ def value_usd(rate: Rate, tokens: dict, speed: str = "standard") -> float:
         + tokens.get("cache_write_5m", 0) * rate.cache_write_5m
         + tokens.get("cache_write_1h", 0) * rate.cache_write_1h
     )
+    # These are subsets of the real token counts, marked per request before
+    # daily aggregation; add only their premium, never count them twice.
+    for kind in ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h"):
+        per_million += tokens.get("long_context_" + kind, 0) * getattr(rate, kind) * (rate.long_context_multiplier - 1)
     return per_million * rate.multiplier(speed) / 1e6

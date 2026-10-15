@@ -260,15 +260,19 @@ class UsageLane:
         since_ts = None if since_date is None else datetime.fromisoformat(since_date).timestamp()
 
         # A frozen day is never recomputed: a missing source must fail the run, not freeze empty days.
-        claude_root = Path(cfg.get("AIOBS_CLAUDE_PROJECTS") or "~/.claude/projects").expanduser()
-        if not claude_root.is_dir():
-            raise RuntimeError(f"Claude Code transcripts not found at {claude_root}")
+        claude_roots = [Path(part.strip()).expanduser()
+                        for part in (cfg.get("AIOBS_CLAUDE_PROJECTS") or "~/.claude/projects").split(",")
+                        if part.strip()]
+        for claude_root in claude_roots:
+            if not claude_root.is_dir():
+                raise RuntimeError(f"Claude Code transcripts not found at {claude_root}")
         codex_root = Path(cfg.get("AIOBS_CODEX_HOME") or "~/.codex").expanduser()
         if not (codex_root / "sessions").is_dir():
             raise RuntimeError(f"Codex session logs not found at {codex_root / 'sessions'}")
 
         doc = tokscale_graph(version)  # shared with the tokscale lane: one run per cycle
-        claude = parse_claude_usage(transcript_paths(claude_root, since_ts), since_date)
+        claude = parse_claude_usage([path for root in claude_roots for path in transcript_paths(root, since_ts)],
+                                    since_date)
         check_claude_coverage(doc, claude, since_date, cutoff)
         speed_state = state.get("lane:codex-speed:data")
         cached = speed_state.get("modes") if isinstance(speed_state, dict) else None

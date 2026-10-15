@@ -28,3 +28,4 @@ Rules for any agent (Claude, Droid, Codex) working in this repository. Global co
 
 ## Owner decisions
 - 2026-10-14: Recheck and stop the identified stuck home-wide search and orphaned tokscale processes; fix whole-process-group timeout cleanup and use the installed pinned tokscale binary; verify live dashboard lane recovery. Leave all code changes uncommitted.
+- 2026-10-15: Keep the dashboard current on every model Claude Code, Codex and Droid use: official list-price entries for models in use, and every Claude Code config dir counted (`AIOBS_CLAUDE_PROJECTS` comma list). See `docs/handoffs/2026-10-15-model-coverage.md`.

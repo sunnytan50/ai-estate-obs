@@ -170,6 +170,24 @@ class UsageLaneTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "Claude Code transcripts"):
             self.collect(doc(), {})
 
+    def test_every_configured_claude_root_is_read(self):
+        # A second Claude config dir (CLAUDE_CONFIG_DIR, e.g. a second account) keeps its own transcripts.
+        second = self.root / "claude-second"
+        second.mkdir()
+        record = {"type": "assistant", "uuid": "u-1", "requestId": "req_1", "timestamp": "2026-10-04T12:00:00Z",
+                  "message": {"id": "msg_1", "model": "claude-opus-5-5", "role": "assistant",
+                              "usage": {"input_tokens": 0, "output_tokens": 1_000_000}}}
+        (second / "session.jsonl").write_text(json.dumps(record) + "\n")
+        self.cfg["AIOBS_CLAUDE_PROJECTS"] = f"{self.root / 'claude'}, {second}"
+        _lane, samples = self.collect(doc(), {})
+        self.assertEqual([s.value for s in samples if s.metric == VALUE and s.labels["model"] == "claude-opus-5-5"],
+                         [20.0])  # 1M output x $20
+
+    def test_a_missing_second_claude_root_fails_the_run(self):
+        self.cfg["AIOBS_CLAUDE_PROJECTS"] = f"{self.root / 'claude'},{self.root / 'nowhere'}"
+        with self.assertRaisesRegex(RuntimeError, "Claude Code transcripts not found at .*nowhere"):
+            self.collect(doc(), {})
+
     def test_missing_codex_session_logs_fail_the_run(self):
         self.cfg["AIOBS_CODEX_HOME"] = str(self.root / "nowhere")
         with self.assertRaisesRegex(RuntimeError, "Codex session logs"):

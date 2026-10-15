@@ -6,6 +6,8 @@ Rates are USD per million tokens, copied from the vendors' own pricing pages:
 
     Anthropic  https://platform.claude.com/docs/en/about-claude/pricing  (fetched 2026-10-05)
     OpenAI     https://developers.openai.com/api/docs/pricing            (fetched 2026-10-05)
+    OpenAI     https://developers.openai.com/api/docs/models/gpt-5.6-luna (fetched 2026-10-15)
+    Moonshot   https://platform.kimi.ai/docs/pricing/chat                (fetched 2026-10-15)
 
 A model with no entry here has no official rate: the caller values it some
 other way (tokscale's own estimate) and reports that share separately.
@@ -80,7 +82,13 @@ TABLE = {
     "gpt-6.1-sol": (_openai(2, 0.10, 2.5, 10, fast=2.0),),
     "gpt-6-luna": (_openai(0.10, 0.01, 0.125, 0.50, fast=2.0),),
     "gpt-5.6-sol": (_openai(4, 0.40, 5, 20),),
+    "gpt-5.6-luna": (_openai(0.20, 0.02, 0.25, 1.20),),  # no Fast price is listed
     "gpt-5.3-codex": (_openai(1.75, 0.175, 1.75, 14, fast=2.0),),
+    # Moonshot: cache writes 1x input (5-minute TTL), 2x (1-hour).
+    "kimi-k3": (Rate(3.00, 15.00, 0.30, 3.00, 6.00),),
+    # Deliberately absent: DeepSeek (priced by time of day; off-peak is half) and
+    # gpt-5.5 (2x input past 272K, window unverified). Daily aggregates resolve
+    # neither, so tokscale's estimate stays, flagged as such.
 }
 
 _DATE_SUFFIX = re.compile(r"-\d{8}$")

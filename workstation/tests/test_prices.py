@@ -25,6 +25,20 @@ class RateTableTests(unittest.TestCase):
         sol = rate_for("gpt-6.1-sol", DAY)
         self.assertEqual((sol.input, sol.cache_read, sol.output), (2, 0.10, 10))
 
+    def test_rates_added_2026_10_15_follow_the_official_pages(self):
+        # OpenAI's gpt-5.6-luna model page and Kimi API pricing, fetched 2026-10-15.
+        luna = rate_for("gpt-5.6-luna", DAY)
+        self.assertEqual((luna.input, luna.cache_read, luna.cache_write_5m, luna.output), (0.20, 0.02, 0.25, 1.20))
+        self.assertEqual(luna.multiplier("fast"), 1.0)  # no Fast price is listed for GPT-5.6 Luna
+        kimi = rate_for("kimi-k3", DAY)
+        self.assertEqual((kimi.input, kimi.cache_read, kimi.cache_write_5m, kimi.cache_write_1h, kimi.output),
+                         (3, 0.30, 3, 6, 15))
+
+    def test_luna_rate_reproduces_the_estimate_it_replaces(self):
+        # tokscale's third-party estimate for Codex gpt-5.6-luna on 2026-10-14 was $9.03.
+        tokens = {"input": 10_243_823, "cache_read": 289_149_184, "output": 998_780}
+        self.assertAlmostEqual(value_usd(rate_for("gpt-5.6-luna", DAY), tokens), 9.03, places=2)
+
     def test_value_reproduces_a_known_day(self):
         # tokscale's own figure for Opus 5.5 on 2026-10-05, all writes as 5-minute ones: $233.2391006
         opus = rate_for("claude-opus-5-5", DAY)
@@ -61,7 +75,8 @@ class RateTableTests(unittest.TestCase):
             self.assertEqual(normalize_model(raw), expected, raw)
 
     def test_models_without_an_official_rate_return_none(self):
-        for model in ("gpt-5.6-luna", "glm-5-2", "kimi-k3", "claude-opus-4-6", "codex-auto-review", "grok-4.6"):
+        # DeepSeek prices by time of day and gpt-5.5 by request size past 272K; daily aggregates resolve neither.
+        for model in ("deepseek-v4-1-flash", "gpt-5.5", "glm-5-2", "claude-opus-4-6", "codex-auto-review", "grok-4.6"):
             self.assertIsNone(rate_for(model, DAY), model)
 
     def test_opus_4_8_and_4_7_follow_the_official_page(self):

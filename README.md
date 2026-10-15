@@ -181,7 +181,7 @@ Every variable lives in `config/estate.env` (copy of `config/estate.example.env`
 | `AIOBS_GPU_EXPORTER_PORT` | gpu-box | `nvidia_gpu_exporter`'s loopback listen port |
 | `AIOBS_LANES` | workstation | Comma list of collector lanes: `tokscale`, `openrouter`, `codex-speed`, `usage`, `codex-limits`. An unrecognized name is a hard config error (exit 2), before any network call. The estate dashboard's dollars come from `usage`; its Codex limit cards from `codex-limits` |
 | `AIOBS_CODEX_HOME` | workstation | Codex metadata root for the `codex-speed`, `usage` and `codex-limits` lanes; defaults to `~/.codex`. Uses `logs_2.sqlite`, `sessions/` and `archived_sessions/` |
-| `AIOBS_CLAUDE_PROJECTS` | workstation | Claude Code transcript root for the `usage` lane (cache-write TTL split, fast mode); defaults to `~/.claude/projects`. Only usage metadata is read |
+| `AIOBS_CLAUDE_PROJECTS` | workstation | Claude Code transcript roots for the `usage` lane (cache-write TTL split, fast mode); defaults to `~/.claude/projects`. Comma list: add `<dir>/projects` for every other `CLAUDE_CONFIG_DIR` you run Claude Code under (a second account), or its usage is never counted. Each listed root must exist. Only usage metadata is read |
 | `AIOBS_COLLECTOR_STATE` | workstation | Optional operator marker, `PAUSED` or `RETIRED`; it is included in the runtime receipt and does not contain credentials |
 | `AIOBS_TOKSCALE_VERSION` | workstation | Pinned installed native `tokscale` package version. Install once with `npx -y tokscale@<version> --version`; scheduled runs use the matching npm-cache binary offline |
 | `AIOBS_OPENROUTER_ENV_FILE` | workstation | Path to a file containing the OpenRouter *Management* API key. Read at runtime, never copied into this repo |

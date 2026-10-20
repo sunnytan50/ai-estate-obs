@@ -9,8 +9,13 @@ Allowance units are an estimate weighted by Standard credit token rates,
 not OpenAI's actual quota percentage or a USD invoice. Rates verified against
 https://learn.chatgpt.com/docs/pricing and /docs/agent-configuration/speed on
 2026-10-01. Astra: 250 / 25 / 1250 credits per million uncached input / cached
-input / output. Included allowance: Standard 1, Fast 2.5, Ultrafast 8;
-purchased credits: 1, 2, 6. API-key requests are excluded from both estimates.
+input / output; Sol: 50 / 2.5 / 250 (/docs/pricing, fetched 2026-10-20).
+Included allowance: Standard 1, Fast 2.5, Ultrafast 8; purchased credits:
+1, 2, 6. API-key requests are excluded from both estimates.
+
+Only the models with Ultrafast (Astra and Sol) are tracked. VALUE is their API
+list-price value per speed tier (prices.py; Unknown is valued at Standard),
+so the dashboard can show where Codex value went by model and speed.
 """
 
 import json
@@ -26,13 +31,18 @@ from pathlib import Path
 
 from aiobs_collector.core import Sample
 from aiobs_collector.lane_tokscale import _end_of_day_local_ms, _local_date_str
+from aiobs_collector.prices import rate_for, value_usd
 
 TOKENS = "aiobs_codex_speed_tokens_total"
 ALLOWANCE = "aiobs_codex_allowance_estimate_total"
 CREDITS = "aiobs_codex_purchased_credits_estimate_total"
+VALUE = "aiobs_codex_speed_value_usd_total"
 INCLUDED_MULTIPLIERS = {"standard": 1.0, "fast": 2.5, "ultrafast": 8.0}
 CREDIT_MULTIPLIERS = {"standard": 1.0, "fast": 2.0, "ultrafast": 6.0}
-ASTRA_RATES = {"input": 250e-6, "cache_read": 25e-6, "output": 1250e-6}
+CREDIT_RATES = {
+    "gpt-6-astra": {"input": 250e-6, "cache_read": 25e-6, "output": 1250e-6},
+    "gpt-6.1-sol": {"input": 50e-6, "cache_read": 2.5e-6, "output": 250e-6},
+}
 METADATA_GRACE_MS = 120_000
 RETENTION_MS = 400 * 86400 * 1000
 _REQUEST = re.compile(r"run_sampling_request\{turn_id=([^\s}]+) model=([^\s}]+)")
@@ -165,7 +175,7 @@ def normalize_rollouts(paths, modes: dict, now_ms: int, *, attributions=None,
                     if not any(delta) or fingerprint in seen:
                         continue
                     seen.add(fingerprint)  # inherited fork history counts once
-                    if model != "gpt-6-astra" or timestamp * 1000 < now_ms - RETENTION_MS:
+                    if model not in CREDIT_RATES or timestamp * 1000 < now_ms - RETENTION_MS:
                         continue
                     speed = billing = "unknown"
                     # Migrate v1 using its old metadata snapshot, preserving
@@ -203,8 +213,11 @@ def normalize_rollouts(paths, modes: dict, now_ms: int, *, attributions=None,
         labels = {"provider": "codex", "model": model, "origin": "client",
                   "speed": speed, "billing": billing}
         increments[(date, TOKENS, tuple(sorted({**labels, "kind": kind}.items())))] += value
+        rate = rate_for(model, date)
+        if rate is not None:
+            increments[(date, VALUE, tuple(sorted(labels.items())))] += value_usd(rate, {kind: value}, speed)
         if billing == "subscription" and speed in INCLUDED_MULTIPLIERS:
-            base = value * ASTRA_RATES[kind]
+            base = value * CREDIT_RATES[model][kind]
             increments[(date, ALLOWANCE, tuple(sorted(labels.items())))] += base * INCLUDED_MULTIPLIERS[speed]
             increments[(date, CREDITS, tuple(sorted(labels.items())))] += base * CREDIT_MULTIPLIERS[speed]
     running = defaultdict(float)
@@ -248,9 +261,9 @@ class CodexSpeedLane:
             historical_modes=_cached_modes(old_modes) if "attributions" not in prior else None,
             historical_cutoff_ms=state.get("lane:codex-speed:last_success_ms", 0),
         )
-        # Preserve model-switch boundaries in Astra turns; omit unrelated turns.
+        # Preserve model-switch boundaries in tracked turns; omit unrelated turns.
         retained_modes = {key: rows for key, rows in modes.items()
-                          if any(r[1] == "gpt-6-astra" for r in rows)
+                          if any(r[1] in CREDIT_RATES for r in rows)
                           and rows[-1][0] * 1000 >= cutoff_ms - RETENTION_MS}
         self.state_data = {"modes": retained_modes, "attributions": attributions}
         return samples

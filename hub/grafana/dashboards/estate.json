@@ -770,7 +770,7 @@
       "gridPos": {
         "x": 0,
         "y": 5,
-        "w": 16,
+        "w": 12,
         "h": 9
       },
       "interval": "1d",
@@ -939,9 +939,9 @@
         "uid": "vm"
       },
       "gridPos": {
-        "x": 16,
+        "x": 12,
         "y": 5,
-        "w": 8,
+        "w": 5,
         "h": 9
       },
       "targets": [
@@ -1077,6 +1077,238 @@
                 "value": {
                   "mode": "fixed",
                   "fixedColor": "#9085e9"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 318,
+      "type": "bargauge",
+      "title": "Codex by model & speed",
+      "description": "Where the Codex value of the two models with speed tiers, GPT-6 Astra and GPT-6.1 Sol, went by speed. Fast costs 2x and Ultrafast 6x the Standard price. Each model's API value (as in Models) is split in proportion to its speed-tagged value from Codex's own logs, so the bars add up to those two models' value; other Codex models are not shown. Speed is recorded from 26 Sep 2026 for Astra and 19 Oct 2026 for Sol; earlier usage is labelled \"no tag\" and valued at Standard.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "gridPos": {
+        "x": 17,
+        "y": 5,
+        "w": 7,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "refId": "A",
+          "expr": "sort_desc((sum by (model,speed)(max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0)) / on(model) group_left sum by (model)(max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0))) * on(model) group_left sum by (model)(max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0)) > 0)",
+          "legendFormat": "{{model}} {{speed}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "left",
+        "showUnfilled": true,
+        "sizing": "manual",
+        "minVizWidth": 8,
+        "minVizHeight": 18,
+        "maxVizHeight": 36,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 15
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "currencyUSD",
+          "min": 0,
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6-astra standard"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6-astra fast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6-astra ultrafast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6-astra unknown"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-sol standard"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-sol fast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-sol ultrafast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-sol unknown"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
                 }
               }
             ]
@@ -2100,8 +2332,8 @@
     {
       "id": 316,
       "type": "bargauge",
-      "title": "Astra speed mix",
-      "description": "Astra tokens this period by speed tier. Fast costs 2x and Ultrafast 6x the Standard API price (your plan allowance burns 2.5x / 8x). Speed is recorded from 26 Sep 2026; earlier usage shows as Unknown and is valued at Standard.",
+      "title": "Codex speed mix",
+      "description": "GPT-6 Astra and GPT-6.1 Sol tokens this period by speed tier. Fast costs 2x and Ultrafast 6x the Standard API price (your plan allowance burns 2.5x / 8x). Speed is recorded from 26 Sep 2026 for Astra and 19 Oct 2026 for Sol; earlier usage is labelled \"no tag\" and valued at Standard.",
       "datasource": {
         "type": "prometheus",
         "uid": "vm"
@@ -2119,8 +2351,8 @@
             "uid": "vm"
           },
           "refId": "A",
-          "expr": "sort_desc(sum by (speed)(max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",billing!=\"api\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",billing!=\"api\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=\"gpt-6-astra\",billing!=\"api\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0)) > 0)",
-          "legendFormat": "{{speed}}",
+          "expr": "sort_desc(sum by (model,speed)(max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__to} / 1000)) * 0)) > 0)",
+          "legendFormat": "{{model}} {{speed}}",
           "instant": true,
           "range": false
         }
@@ -2177,12 +2409,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "standard"
+              "options": "gpt-6-astra standard"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "Standard (1×)"
+                "value": "Astra Standard"
               },
               {
                 "id": "color",
@@ -2196,12 +2428,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "fast"
+              "options": "gpt-6-astra fast"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "Fast (2×)"
+                "value": "Astra Fast"
               },
               {
                 "id": "color",
@@ -2215,12 +2447,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "ultrafast"
+              "options": "gpt-6-astra ultrafast"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "Ultrafast (6×)"
+                "value": "Astra Ultrafast"
               },
               {
                 "id": "color",
@@ -2234,12 +2466,88 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "unknown"
+              "options": "gpt-6-astra unknown"
             },
             "properties": [
               {
                 "id": "displayName",
-                "value": "Unknown (before 26 Sep)"
+                "value": "Astra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-sol standard"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-sol fast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-sol ultrafast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-sol unknown"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol no tag"
               },
               {
                 "id": "color",

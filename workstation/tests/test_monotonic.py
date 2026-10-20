@@ -112,6 +112,7 @@ class LatestRawBySeriesTests(unittest.TestCase):
             "aiobs_tokens_total", "aiobs_cost_usd_total", "aiobs_codex_speed_tokens_total",
             "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total",
             "aiobs_usage_tokens_total", "aiobs_list_value_usd_total", "aiobs_list_value_fallback_usd_total",
+            "aiobs_codex_speed_value_usd_total",
         })
 
 

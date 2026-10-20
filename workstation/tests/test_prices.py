@@ -61,6 +61,15 @@ class RateTableTests(unittest.TestCase):
         # A tier the model has no price for is billed at standard.
         self.assertAlmostEqual(value_usd(rate_for("gpt-6.1-sol", DAY), million_out, "ultrafast"), 10.0)
 
+    def test_sol_ultrafast_is_six_times_standard_from_2026_10_19(self):
+        # learn.chatgpt.com/docs/agent-configuration/speed (fetched 2026-10-20):
+        # Ultrafast supports GPT-6 Astra and GPT-6.1 Sol, billed at 6x Standard.
+        self.assertEqual(rate_for("gpt-6.1-sol", "2026-10-19").multiplier("ultrafast"), 6.0)
+        self.assertEqual(rate_for("gpt-6.1-sol", "2026-10-19").multiplier("fast"), 2.0)
+        self.assertEqual(rate_for("gpt-6.1-sol", "2026-10-19").input, 2)
+        # Frozen days keep the entry they were valued with.
+        self.assertEqual(rate_for("gpt-6.1-sol", "2026-10-18").multiplier("ultrafast"), 1.0)
+
     def test_normalize_model(self):
         cases = {
             "gpt-5-6-sol": ("gpt-5.6-sol", "standard"),

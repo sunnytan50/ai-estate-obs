@@ -38,7 +38,7 @@ from aiobs_collector.core import (
     save_state,
 )
 from aiobs_collector.lane_openrouter import OpenRouterLane
-from aiobs_collector.lane_codex_speed import CodexSpeedLane, TOKENS, ALLOWANCE, CREDITS
+from aiobs_collector.lane_codex_speed import CodexSpeedLane, TOKENS, ALLOWANCE, CREDITS, VALUE as SPEED_VALUE
 from aiobs_collector.lane_codex_limits import CodexLimitsLane, LIMIT_METRICS
 from aiobs_collector.lane_tokscale import TokscaleLane, clear_tokscale_graph_cache
 from aiobs_collector.lane_usage import USAGE_METRICS, UsageLane
@@ -118,7 +118,7 @@ def _lane_for_sample(sample) -> "str | None":
     this mapping doesn't anticipate) -- callers must treat None as "cannot
     attribute, do not silently drop."
     """
-    if sample.metric in {TOKENS, ALLOWANCE, CREDITS}:
+    if sample.metric in {TOKENS, ALLOWANCE, CREDITS, SPEED_VALUE}:
         return "codex-speed"
     if sample.metric in USAGE_METRICS:
         return "usage"

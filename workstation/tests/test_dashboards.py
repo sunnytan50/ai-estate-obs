@@ -91,7 +91,8 @@ BUILTIN_VARS = {
 
 COUNTER_METRICS = ("aiobs_tokens_total", "aiobs_cost_usd_total", "aiobs_codex_speed_tokens_total",
                    "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total",
-                   "aiobs_usage_tokens_total", "aiobs_list_value_usd_total", "aiobs_list_value_fallback_usd_total")
+                   "aiobs_usage_tokens_total", "aiobs_list_value_usd_total", "aiobs_list_value_fallback_usd_total",
+                   "aiobs_codex_speed_value_usd_total")
 VAR_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
 
 
@@ -360,7 +361,7 @@ class TestEstateDashboard(unittest.TestCase):
     def test_panels_exist(self):
         titles = {p.get("title") for p in _walk(self.dash["panels"])}
         for title in ("API value per day", "By provider", "Models", "API value per day by model",
-                      "Tokens per day", "Tokens by kind", "Astra speed mix", "Codex weekly limit & credits",
+                      "Tokens per day", "Tokens by kind", "Codex speed mix", "Codex by model & speed", "Codex weekly limit & credits",
                       "Local GPU & inference", "Pipeline & Hermes", "Estate Timeline", "Collector Lanes"):
             self.assertIn(title, titles)
 

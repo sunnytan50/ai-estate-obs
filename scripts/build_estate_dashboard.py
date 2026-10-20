@@ -29,12 +29,17 @@ TOKENS = "aiobs_usage_tokens_total"
 OR_COST = "aiobs_cost_usd_total"
 OR_TOKENS = "aiobs_tokens_total"
 SPEED = "aiobs_codex_speed_tokens_total"
+SPEED_VALUE = "aiobs_codex_speed_value_usd_total"
 LIMIT = "aiobs_codex_limit_used_ratio"
 RESETS = "aiobs_codex_limit_resets_at_seconds"
 CREDITS = "aiobs_codex_credits_balance"
 
 COLORS = {"claude-code": "#d95926", "codex": "#3987e5", "droid": "#199e70",
           "grok": "#c98500", "openrouter": "#9085e9"}
+# Codex models with speed tiers; colour encodes the tier, the name the model.
+SPEED_MODELS = {"gpt-6-astra": "Astra", "gpt-6.1-sol": "Sol"}
+SPEEDS = {"standard": ("Standard", "#9ec5f4"), "fast": ("Fast", "#3987e5"),
+          "ultrafast": ("Ultrafast", "#184f95"), "unknown": ("no tag", "#55534e")}
 ACCENT, MUTED, GOOD, WARN, BAD = "#5fb7d4", "#898781", "#0ca30c", "#e0b400", "#d03b3b"
 
 FILTER = 'provider=~"$provider",model=~"$model"'
@@ -77,9 +82,14 @@ TEXT = {
     "tokens_day": "Tokens per local day by provider.",
     "kinds": "Where this period's tokens went. Cache reads are context re-sent from the provider's cache, billed "
              "at a fraction of the input price.",
-    "speed": "Astra tokens this period by speed tier. Fast costs 2x and Ultrafast 6x the Standard API price "
-             "(your plan allowance burns 2.5x / 8x). Speed is recorded from 26 Sep 2026; earlier usage shows "
-             "as Unknown and is valued at Standard.",
+    "speed": "GPT-6 Astra and GPT-6.1 Sol tokens this period by speed tier. Fast costs 2x and Ultrafast 6x the "
+             "Standard API price (your plan allowance burns 2.5x / 8x). Speed is recorded from 26 Sep 2026 for "
+             "Astra and 19 Oct 2026 for Sol; earlier usage is labelled \"no tag\" and valued at Standard.",
+    "codex_speed": "Where the Codex value of the two models with speed tiers, GPT-6 Astra and GPT-6.1 Sol, went "
+                   "by speed. Fast costs 2x and Ultrafast 6x the Standard price. Each model's API value (as in "
+                   "Models) is split in proportion to its speed-tagged value from Codex's own logs, so the bars "
+                   "add up to those two models' value; other Codex models are not shown. Speed is recorded from "
+                   "26 Sep 2026 for Astra and 19 Oct 2026 for Sol; earlier usage is labelled \"no tag\" and valued at Standard.",
     "limits": "Weekly limit used (left axis) and purchased credits left (right axis), from your Codex logs.",
 }
 
@@ -90,6 +100,13 @@ def period(metric, sel, by=None):
     start = f"max_over_time({metric}{{{sel}}}[400d] @ {FROM})"
     inner = f"{end} - ({start} or {end} * 0)"
     return f"sum by ({by})({inner})" if by else f"sum({inner})"
+
+
+def speed_split(sel):
+    """Each model's usage-lane value, split in the proportions of its speed-lane value."""
+    by_speed = period(SPEED_VALUE, sel, "model,speed")
+    return (f"({by_speed} / on(model) group_left {period(SPEED_VALUE, sel, 'model')})"
+            f" * on(model) group_left {period(VALUE, sel, 'model')}")
 
 
 def since_midnight(metric, sel):
@@ -184,7 +201,7 @@ def bars(pid, pos, title, text, expr, legend, unit, shades=False, legend_table=F
                             "overrides": provider_colors(shades)}}
 
 
-def bar_list(pid, pos, title, text, expr, legend, unit, decimals, overrides):
+def bar_list(pid, pos, title, text, expr, legend, unit, decimals, overrides, title_size=13, value_size=17):
     x, y, w, h = pos
     return {"id": pid, "type": "bargauge", "title": title, "description": text, "datasource": DS,
             "gridPos": {"x": x, "y": y, "w": w, "h": h},
@@ -194,7 +211,7 @@ def bar_list(pid, pos, title, text, expr, legend, unit, decimals, overrides):
                         "namePlacement": "left", "showUnfilled": True, "sizing": "manual",
                         "minVizWidth": 8, "minVizHeight": 18, "maxVizHeight": 36,
                         "legend": {"showLegend": False, "displayMode": "list", "placement": "bottom", "calcs": []},
-                        "text": {"titleSize": 13, "valueSize": 17}},
+                        "text": {"titleSize": title_size, "valueSize": value_size}},
             "fieldConfig": {"defaults": {"color": {"mode": "fixed", "fixedColor": MUTED}, "unit": unit,
                                          "min": 0, "decimals": decimals, "mappings": [],
                                          "thresholds": steps((None, "green"))},
@@ -327,16 +344,20 @@ def limits_chart(pid, pos):
 def body_panels():
     kinds = {"cache_read": "Cache reads", "input": "Input", "output": "Output (incl. reasoning)",
              "cache_write": "Cache writes"}
-    speeds = {"standard": ("Standard (1×)", "#9ec5f4"), "fast": ("Fast (2×)", "#3987e5"),
-              "ultrafast": ("Ultrafast (6×)", "#184f95"), "unknown": ("Unknown (before 26 Sep)", "#55534e")}
-    astra = 'origin="client",provider="codex",model="gpt-6-astra",billing!="api",' + FILTER
+    speed_sel = 'origin="client",provider="codex",model=~"gpt-6-astra|gpt-6.1-sol",' + FILTER
+    speed_mix = [override(f"{model} {speed}", ("displayName", f"{name} {label}"),
+                          ("color", {"mode": "fixed", "fixedColor": color}))
+                 for model, name in SPEED_MODELS.items() for speed, (label, color) in SPEEDS.items()]
     return [
         row(300, 4, "Where the value went"),
-        bars(310, (0, 5, 16, 9), "API value per day", TEXT["per_day"],
+        bars(310, (0, 5, 12, 9), "API value per day", TEXT["per_day"],
              union(daily(VALUE, SEL, "provider"), daily(OR_COST, SEL_OR, "provider")), "{{provider}}", "currencyUSD"),
-        bar_list(311, (16, 5, 8, 9), "By provider", TEXT["by_provider"],
+        bar_list(311, (12, 5, 5, 9), "By provider", TEXT["by_provider"],
                  f"sort_desc({union(period(VALUE, SEL, 'provider'), period(OR_COST, SEL_OR, 'provider'))} > 0)",
                  "{{provider}}", "currencyUSD", 2, provider_colors()),
+        bar_list(318, (17, 5, 7, 9), "Codex by model & speed", TEXT["codex_speed"],
+                 f"sort_desc({speed_split(speed_sel)} > 0)", "{{model}} {{speed}}",
+                 "currencyUSD", 2, speed_mix, title_size=12, value_size=15),
         row(301, 14, "Models"),
         models_table(312, (0, 15, 24, 10)),
         bars(313, (0, 25, 24, 10), "API value per day by model", TEXT["per_model"],
@@ -350,10 +371,9 @@ def body_panels():
                  "{{kind}}", "short", 2,
                  [override(k, ("displayName", v)) for k, v in kinds.items()]),
         row(303, 44, "Codex"),
-        bar_list(316, (0, 45, 8, 8), "Astra speed mix", TEXT["speed"],
-                 f"sort_desc({period(SPEED, astra, 'speed')} > 0)", "{{speed}}", "short", 2,
-                 [override(k, ("displayName", name), ("color", {"mode": "fixed", "fixedColor": color}))
-                  for k, (name, color) in speeds.items()]),
+        bar_list(316, (0, 45, 8, 8), "Codex speed mix", TEXT["speed"],
+                 f"sort_desc({period(SPEED, speed_sel + ',billing!=\"api\"', 'model,speed')} > 0)",
+                 "{{model}} {{speed}}", "short", 2, speed_mix),
         limits_chart(317, (8, 45, 16, 8)),
     ]
 

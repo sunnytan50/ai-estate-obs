@@ -8,6 +8,7 @@ Rates are USD per million tokens, copied from the vendors' own pricing pages:
     OpenAI     https://developers.openai.com/api/docs/pricing            (fetched 2026-10-05)
     OpenAI     https://developers.openai.com/api/docs/models/gpt-5.6-luna (fetched 2026-10-15)
     Moonshot   https://platform.kimi.ai/docs/pricing/chat                (fetched 2026-10-15)
+    OpenAI     https://learn.chatgpt.com/docs/agent-configuration/speed  (fetched 2026-10-20)
 
 A model with no entry here has no official rate: the caller values it some
 other way (tokscale's own estimate) and reports that share separately.
@@ -76,10 +77,13 @@ TABLE = {
     "claude-sonnet-4-5": (_anthropic(3, 15),),
     "claude-haiku-3-5": (_anthropic(0.8, 4),),
     # OpenAI Standard tier: input / cached input / cache writes / output.
-    # Fast = 2x every category; Ultrafast (Astra only) = 6x. Every Codex model
+    # Fast = 2x every category; Ultrafast (Astra, and Sol from 2026-10-19) = 6x. Every Codex model
     # here runs with a 258,400-token window, so the >272K tier never applies.
     "gpt-6-astra": (_openai(10, 1, 12.5, 50, fast=2.0, ultrafast=6.0),),
-    "gpt-6.1-sol": (_openai(2, 0.10, 2.5, 10, fast=2.0),),
+    # Sol Ultrafast (6x) was missing until 2026-10-20; the entry starts on the
+    # oldest day not yet frozen, so frozen days keep the value they were pushed with.
+    "gpt-6.1-sol": (_openai(2, 0.10, 2.5, 10, fast=2.0),
+                    Rate(2, 10, 0.10, 2.5, 2.5, (("fast", 2.0), ("ultrafast", 6.0)), since="2026-10-19")),
     "gpt-6-luna": (_openai(0.10, 0.01, 0.125, 0.50, fast=2.0),),
     "gpt-5.6-sol": (_openai(4, 0.40, 5, 20),),
     "gpt-5.6-luna": (_openai(0.20, 0.02, 0.25, 1.20),),  # no Fast price is listed

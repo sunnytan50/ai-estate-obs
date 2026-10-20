@@ -9,7 +9,7 @@ from unittest.mock import patch
 from aiobs_collector.core import run_lanes
 from aiobs_collector.__main__ import _build_lanes, _lane_for_sample
 from aiobs_collector.lane_codex_speed import (
-    TOKENS, ALLOWANCE, CREDITS, CodexSpeedLane, normalize_rollouts, read_modes,
+    TOKENS, ALLOWANCE, CREDITS, VALUE, CodexSpeedLane, normalize_rollouts, read_modes,
 )
 from aiobs_collector.monotonic import apply_monotonic
 
@@ -45,6 +45,10 @@ class CodexSpeedTests(unittest.TestCase):
     def modes(self, speed="ultrafast", billing="subscription", model="gpt-6-astra"):
         return {"thread/turn": [[TS - 1, model, speed, billing]]}
 
+    def latest_at(self, samples, now, metric, **labels):
+        return sum(s.value for s in samples if s.ts_ms == now and s.metric == metric
+                   and all(s.labels.get(k) == v for k, v in labels.items()))
+
     def latest(self, samples, metric, **labels):
         return sum(s.value for s in samples if s.ts_ms == NOW and s.metric == metric
                    and all(s.labels.get(k) == v for k, v in labels.items()))
@@ -67,6 +71,31 @@ class CodexSpeedTests(unittest.TestCase):
                 s = normalize_rollouts([p], self.modes(speed), NOW)
                 self.assertAlmostEqual(self.latest(s, ALLOWANCE), .0285 * included)
                 self.assertAlmostEqual(self.latest(s, CREDITS), .0285 * paid)
+
+    def test_sol_is_tracked_with_its_own_credit_rates(self):
+        p = self.rollout([context(model="gpt-6.1-sol"), usage()])
+        s = normalize_rollouts([p], self.modes("ultrafast", model="gpt-6.1-sol"), NOW)
+        base = (60 * 50 + 40 * 2.5 + 10 * 250) / 1e6
+        self.assertEqual(self.latest(s, TOKENS, model="gpt-6.1-sol", speed="ultrafast"), 110)
+        self.assertAlmostEqual(self.latest(s, ALLOWANCE, model="gpt-6.1-sol"), base * 8)
+        self.assertAlmostEqual(self.latest(s, CREDITS, model="gpt-6.1-sol"), base * 6)
+
+    def test_value_is_api_list_price_times_the_speed_multiplier(self):
+        p = self.rollout([context(model="gpt-6.1-sol"), usage(timestamp="2026-10-19T08:00:00Z")])
+        now = int(datetime(2026, 10, 20, 12, tzinfo=timezone.utc).timestamp() * 1000)
+        ts = datetime(2026, 10, 19, 8, tzinfo=timezone.utc).timestamp()
+        standard = (60 * 2 + 40 * 0.10 + 10 * 10) / 1e6
+        for speed, multiplier in [("standard", 1), ("fast", 2), ("ultrafast", 6), ("unknown", 1)]:
+            with self.subTest(speed=speed):
+                modes = {"thread/turn": [[ts - 1, "gpt-6.1-sol", speed, "subscription"]]}
+                s = normalize_rollouts([p], modes, now)
+                self.assertAlmostEqual(self.latest_at(s, now, VALUE, model="gpt-6.1-sol", speed=speed),
+                                       standard * multiplier)
+
+    def test_api_billed_usage_still_has_list_value(self):
+        p = self.rollout([context(), usage()])
+        s = normalize_rollouts([p], self.modes("fast", billing="api"), NOW)
+        self.assertAlmostEqual(self.latest(s, VALUE, billing="api"), (60 * 10 + 40 * 1 + 10 * 50) / 1e6 * 2)
 
     def test_duplicate_and_cumulative_notifications_do_not_multiply_usage(self):
         p = self.rollout([context(), usage(), usage(), usage(200, 80, 20)])
@@ -93,7 +122,7 @@ class CodexSpeedTests(unittest.TestCase):
     def test_missing_future_or_mismatched_metadata_is_unknown(self):
         p = self.rollout([context(), usage()])
         future = self.modes(); future["thread/turn"][0][0] = TS + 1
-        for modes in [{}, future, self.modes(model="gpt-6-sol")]:
+        for modes in [{}, future, self.modes(model="gpt-6-luna")]:
             s = normalize_rollouts([p], modes, NOW)
             self.assertEqual(self.latest(s, TOKENS, speed="unknown"), 110)
             self.assertEqual(self.latest(s, ALLOWANCE), 0)
@@ -112,7 +141,7 @@ class CodexSpeedTests(unittest.TestCase):
         self.assertEqual(self.latest(normalize_rollouts([a, b], self.modes(), NOW), TOKENS), 110)
 
     def test_other_models_are_excluded_and_baseline_still_advances(self):
-        p = self.rollout([context(model="gpt-6-sol"), usage(), context(), usage(200, 80, 20)])
+        p = self.rollout([context(model="gpt-6-luna"), usage(), context(), usage(200, 80, 20)])
         self.assertEqual(self.latest(normalize_rollouts([p], self.modes(), NOW), TOKENS), 110)
 
     def test_partial_line_and_invalid_counts_do_not_export_content(self):

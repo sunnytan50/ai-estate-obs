@@ -2,7 +2,7 @@
 
 Owner ask: GPT-6 Sol at Standard, Fast and Ultrafast was not shown on the dashboard; include it "in a nice way", in "Where the value went" at the top.
 
-## Done (LIVE, uncommitted — commit/push need the owner's go)
+## Done (LIVE; committed and pushed as 35a784d on 2026-10-20 at the owner's go)
 1. `workstation/aiobs_collector/prices.py`: new `gpt-6.1-sol` entry `since="2026-10-19"` adding Ultrafast = 6x (Fast stays 2x). Before this, Sol Ultrafast tokens were valued at Standard. Source: learn.chatgpt.com/docs/agent-configuration/speed, fetched 2026-10-20 ("Ultrafast supports GPT-6 Astra and GPT-6.1 Sol", 6x purchased credits / API). 10-19 was the oldest unfrozen day, so no frozen day changed.
 2. `workstation/aiobs_collector/lane_codex_speed.py`: tracks Astra AND Sol (was Astra only). Sol credit rates 50 / 2.5 / 250 per MTok (learn.chatgpt.com/docs/pricing, fetched 2026-10-20). New metric `aiobs_codex_speed_value_usd_total{model,speed,billing}` = list price x speed multiplier. Mode cache now retains Sol turns too, so the usage lane's Sol speed shares survive diagnostic-log rotation.
 3. Registered the metric in `__main__._lane_for_sample` and `monotonic.CUMULATIVE_METRICS`.

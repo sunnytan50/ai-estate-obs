@@ -30,6 +30,11 @@ def claude_bucket(input=0, output=0, cache_read=0, w5m=0, w1h=0):
 
 
 class DayEntriesTests(unittest.TestCase):
+    def test_unlisted_fast_price_keeps_estimate_instead_of_standard_rate(self):
+        entry = day_entries(doc(("2026-11-08", [row("droid", "gpt-5.6-sol-fast", output=1_000_000, cost=40)])), {}, {})["2026-11-08"]
+        self.assertEqual(entry[(VALUE, "droid", "gpt-5.6-sol-fast", "")],40)
+        self.assertEqual(entry[(FALLBACK, "droid", "gpt-5.6-sol-fast", "")],40)
+
     def test_haiku_daily_aggregate_without_context_is_labelled_estimated(self):
         entry = day_entries(doc(("2026-10-07", [row("droid", "claude-haiku-5-5", output=100, cost=0.02)])), {}, {})["2026-10-07"]
         self.assertEqual(entry[(VALUE, "droid", "claude-haiku-5-5", "")], 0.02)

@@ -133,7 +133,7 @@ exception class only); it never contains credentials or endpoint keys.
 `http://<hub-tailnet-ip>:3000/d/aiobs-estate` over the tailnet — the **AI Estate** dashboard. It opens on **this month**; the **This month**, **Last month** and **Last 30 days** buttons at the top (or the time picker) choose the period, and every total follows it. Top to bottom:
 
 - **Header cards** — API value for the period (what the usage would cost at official API list prices, plus real OpenRouter spend), tokens for the period, today's API value, real OpenRouter spend for the period, your **Codex weekly limit** (OpenAI's own figure from your latest Codex request, with the time until it resets), your purchased **Codex credits** left, and a pipeline check (✓ All up / ✕ n down). Today, the Codex cards and the pipeline always show the present.
-- **Where the value went** — API value per local day stacked by provider (today is the last bar), beside the period's value per provider. Each provider keeps one colour across the whole dashboard.
+- **Where the value went** — API value per local day, totals by provider, and separate model/speed breakdowns for Codex, Claude Code and Droid. Each speed breakdown adds up to the corresponding Models totals. Missing speed history is labelled no tag. Fast/Ultrafast are API list-price values, not subscription charges or Factory credit multipliers.
 - **Models** — every model used in the period, ranked by API value: tokens, output (reasoning included), share, blended $ per 1M tokens, and a Pricing column (*list price*, *estimate* for models with no official rate, *real spend* for OpenRouter). Below it, API value per day for the 10 biggest models, each a shade of its provider's colour.
 - **Tokens** — tokens per day by provider and the period's split by kind (cache reads usually dominate).
 - **Codex** — the Astra speed mix for the period (Standard / Fast / Ultrafast; speed is recorded from 26 Sep 2026) and the weekly limit and credit balance over time.
@@ -179,7 +179,7 @@ Every variable lives in `config/estate.env` (copy of `config/estate.example.env`
 | `AIOBS_BOX_HOST_LABEL` | gpu-box | `host` label value stamped on every metric from this box |
 | `AIOBS_LLM_METRICS_TARGET` | gpu-box | Loopback `host:port` of the inference server's `/metrics` on the box (e.g. `127.0.0.1:8002`) |
 | `AIOBS_GPU_EXPORTER_PORT` | gpu-box | `nvidia_gpu_exporter`'s loopback listen port |
-| `AIOBS_LANES` | workstation | Comma list of collector lanes: `tokscale`, `openrouter`, `codex-speed`, `usage`, `codex-limits`. An unrecognized name is a hard config error (exit 2), before any network call. The estate dashboard's dollars come from `usage`; its Codex limit cards from `codex-limits` |
+| `AIOBS_LANES` | workstation | Comma list of collector lanes: `tokscale`, `openrouter`, `codex-speed`, `usage`, `codex-limits`, `client-speed`. An unrecognized name is a hard config error (exit 2), before any network call. The estate dashboard's dollars come from `usage`; its Codex limit cards from `codex-limits` |
 | `AIOBS_CODEX_HOME` | workstation | Codex metadata root for the `codex-speed`, `usage` and `codex-limits` lanes; defaults to `~/.codex`. Uses `logs_2.sqlite`, `sessions/` and `archived_sessions/` |
 | `AIOBS_CLAUDE_PROJECTS` | workstation | Claude Code transcript roots for the `usage` lane (cache-write TTL split, fast mode); defaults to `~/.claude/projects`. Comma list: add `<dir>/projects` for every other `CLAUDE_CONFIG_DIR` you run Claude Code under (a second account), or its usage is never counted. Each listed root must exist. Only usage metadata is read |
 | `AIOBS_COLLECTOR_STATE` | workstation | Optional operator marker, `PAUSED` or `RETIRED`; it is included in the runtime receipt and does not contain credentials |
@@ -213,3 +213,7 @@ This system exports token counts, timestamps, model names, speed/auth classes, a
 ## License
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+### Client speed coverage (2026-11-08)
+
+The `client-speed` lane reads Claude response speed tags from every configured Claude projects directory and Droid model IDs from the pinned tokscale graph. It freezes closed days separately from the usage ledger. It exports only token/value totals labelled by provider, model and speed. The dashboard weights each model’s existing usage total by this speed split; it does not add the breakdown to estate totals a second time. Droid `-ultrafast` IDs resolve to their base model and verified multiplier. A speed tier without a verified rate retains tokscale’s estimate instead of inheriting Standard pricing. Existing frozen usage days are not repriced.

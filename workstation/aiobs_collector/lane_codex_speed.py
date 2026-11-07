@@ -13,7 +13,7 @@ input / output; Sol: 50 / 2.5 / 250 (/docs/pricing, fetched 2026-10-20).
 Included allowance: Standard 1, Fast 2.5, Ultrafast 8; purchased credits:
 1, 2, 6. API-key requests are excluded from both estimates.
 
-Only the models with Ultrafast (Astra and Sol) are tracked. VALUE is their API
+Astra, Sol and Terra are tracked. Terra supports Standard and Fast. VALUE is their API
 list-price value per speed tier (prices.py; Unknown is valued at Standard),
 so the dashboard can show where Codex value went by model and speed.
 """
@@ -40,6 +40,8 @@ VALUE = "aiobs_codex_speed_value_usd_total"
 INCLUDED_MULTIPLIERS = {"standard": 1.0, "fast": 2.5, "ultrafast": 8.0}
 CREDIT_MULTIPLIERS = {"standard": 1.0, "fast": 2.0, "ultrafast": 6.0}
 CREDIT_RATES = {
+    # https://learn.chatgpt.com/docs/pricing, verified 2026-10-27.
+    "gpt-6.1-terra": {"input": 25e-6, "cache_read": 1.25e-6, "output": 125e-6},
     "gpt-6-astra": {"input": 250e-6, "cache_read": 25e-6, "output": 1250e-6},
     "gpt-6.1-sol": {"input": 50e-6, "cache_read": 2.5e-6, "output": 250e-6},
 }
@@ -129,6 +131,7 @@ def normalize_rollouts(paths, modes: dict, now_ms: int, *, attributions=None,
     if attributions is None:
         attributions = {}
     daily = defaultdict(float)
+    long_daily = defaultdict(float)
     seen = set()
     now_s = now_ms / 1000
     for path in sorted(paths):
@@ -203,7 +206,12 @@ def normalize_rollouts(paths, modes: dict, now_ms: int, *, attributions=None,
                     date = datetime.fromtimestamp(timestamp).date().isoformat()
                     for kind, value in values.items():
                         if value:
-                            daily[(date, model, speed, billing, kind)] += value
+                            key = (date, model, speed, billing, kind)
+                            daily[key] += value
+                            rate = rate_for(model, date)
+                            prompt = (info.get("last_token_usage") or {}).get("input_tokens", delta[0])
+                            if rate and rate.long_context_threshold and prompt > rate.long_context_threshold:
+                                long_daily[key] += value
 
     # Convert daily increments into the same sparse cumulative shape as the
     # other lanes. Emit live carries too, so retention/drop shaping has a
@@ -215,7 +223,8 @@ def normalize_rollouts(paths, modes: dict, now_ms: int, *, attributions=None,
         increments[(date, TOKENS, tuple(sorted({**labels, "kind": kind}.items())))] += value
         rate = rate_for(model, date)
         if rate is not None:
-            increments[(date, VALUE, tuple(sorted(labels.items())))] += value_usd(rate, {kind: value}, speed)
+            increments[(date, VALUE, tuple(sorted(labels.items())))] += value_usd(rate, {kind: value, "long_context_" + kind:
+                long_daily[(date, model, speed, billing, kind)]}, speed)
         if billing == "subscription" and speed in INCLUDED_MULTIPLIERS:
             base = value * CREDIT_RATES[model][kind]
             increments[(date, ALLOWANCE, tuple(sorted(labels.items())))] += base * INCLUDED_MULTIPLIERS[speed]

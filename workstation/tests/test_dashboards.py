@@ -92,7 +92,7 @@ BUILTIN_VARS = {
 COUNTER_METRICS = ("aiobs_tokens_total", "aiobs_cost_usd_total", "aiobs_codex_speed_tokens_total",
                    "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total",
                    "aiobs_usage_tokens_total", "aiobs_list_value_usd_total", "aiobs_list_value_fallback_usd_total",
-                   "aiobs_codex_speed_value_usd_total")
+                   "aiobs_codex_speed_value_usd_total", "aiobs_client_speed_value_usd_total", "aiobs_client_speed_tokens_total")
 VAR_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
 
 
@@ -358,10 +358,20 @@ class TestEstateDashboard(unittest.TestCase):
             for selector in re.findall(r"aiobs_(?:cost_usd|list_value_usd|list_value_fallback_usd)_total\{([^}]*)\}", expr):
                 self.assertNotIn("kind=", selector, f"panel {panel['id']} filters a value series by kind")
 
+    def test_client_speed_join_preserves_provider_and_has_missing_history_fallback(self):
+        for panel in self.dash['panels']:
+            if panel['id'] in (319,320):
+                expr=panel['targets'][0]['expr']
+                self.assertIn('on(provider,model)',expr)
+                self.assertIn('group_left() (',expr)
+                self.assertIn('unless on(provider,model)',expr)
+                self.assertIn('"speed", "unknown"',expr)
+                self.assertEqual(panel['options']['namePlacement'],'top')
+
     def test_panels_exist(self):
         titles = {p.get("title") for p in _walk(self.dash["panels"])}
         for title in ("API value per day", "By provider", "Models", "API value per day by model",
-                      "Tokens per day", "Tokens by kind", "Codex speed mix", "Codex by model & speed", "Codex weekly limit & credits",
+                      "Tokens per day", "Tokens by kind", "Codex speed mix", "Codex by model & speed", "Claude Code by model & speed", "Droid by model & speed", "Codex weekly limit & credits",
                       "Local GPU & inference", "Pipeline & Hermes", "Estate Timeline", "Collector Lanes"):
             self.assertIn(title, titles)
 

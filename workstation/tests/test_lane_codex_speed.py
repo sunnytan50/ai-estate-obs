@@ -72,6 +72,21 @@ class CodexSpeedTests(unittest.TestCase):
                 self.assertAlmostEqual(self.latest(s, ALLOWANCE), .0285 * included)
                 self.assertAlmostEqual(self.latest(s, CREDITS), .0285 * paid)
 
+    def test_terra_standard_fast_and_long_context(self):
+        for prompt in (100, 272000, 272001):
+            for speed, multiplier in (("standard", 1), ("fast", 2)):
+                with self.subTest(prompt=prompt, speed=speed):
+                    event = usage(input=prompt, cached=40, output=10)
+                    event["payload"]["info"]["last_token_usage"]["input_tokens"] = prompt
+                    p = self.rollout([context(model="gpt-6.1-terra"), event])
+                    samples = normalize_rollouts([p], self.modes(speed, model="gpt-6.1-terra"), NOW)
+                    inp_mult, out_mult = (2, 1.5) if prompt > 272000 else (1, 1)
+                    expected = (((prompt - 40) + 40 * .05) * inp_mult + 10 * 5 * out_mult) / 1e6 * multiplier
+                    self.assertEqual(self.latest(samples, TOKENS), prompt + 10)
+                    self.assertAlmostEqual(self.latest(samples, VALUE), expected)
+                    self.assertAlmostEqual(self.latest(samples, CREDITS),
+                                           ((prompt - 40) * 25 + 40 * 1.25 + 10 * 125) / 1e6 * multiplier)
+
     def test_sol_is_tracked_with_its_own_credit_rates(self):
         p = self.rollout([context(model="gpt-6.1-sol"), usage()])
         s = normalize_rollouts([p], self.modes("ultrafast", model="gpt-6.1-sol"), NOW)

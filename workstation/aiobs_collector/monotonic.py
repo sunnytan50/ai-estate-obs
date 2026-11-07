@@ -55,6 +55,7 @@ CUMULATIVE_METRICS = frozenset({
     "aiobs_codex_allowance_estimate_total", "aiobs_codex_purchased_credits_estimate_total",
     "aiobs_usage_tokens_total", "aiobs_list_value_usd_total", "aiobs_list_value_fallback_usd_total",
     "aiobs_codex_speed_value_usd_total",
+    "aiobs_client_speed_value_usd_total", "aiobs_client_speed_tokens_total",
 })
 STATE_KEY = "monotonic"
 _PEAKS_QUERY = 'max_over_time({__name__=~"' + "|".join(sorted(CUMULATIVE_METRICS)) + '"}[400d])'

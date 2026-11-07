@@ -30,6 +30,7 @@ OR_COST = "aiobs_cost_usd_total"
 OR_TOKENS = "aiobs_tokens_total"
 SPEED = "aiobs_codex_speed_tokens_total"
 SPEED_VALUE = "aiobs_codex_speed_value_usd_total"
+CLIENT_SPEED_VALUE = "aiobs_client_speed_value_usd_total"
 LIMIT = "aiobs_codex_limit_used_ratio"
 RESETS = "aiobs_codex_limit_resets_at_seconds"
 CREDITS = "aiobs_codex_credits_balance"
@@ -37,7 +38,7 @@ CREDITS = "aiobs_codex_credits_balance"
 COLORS = {"claude-code": "#d95926", "codex": "#3987e5", "droid": "#199e70",
           "grok": "#c98500", "openrouter": "#9085e9"}
 # Codex models with speed tiers; colour encodes the tier, the name the model.
-SPEED_MODELS = {"gpt-6-astra": "Astra", "gpt-6.1-sol": "Sol"}
+SPEED_MODELS = {"gpt-6-astra": "Astra", "gpt-6.1-sol": "Sol", "gpt-6.1-terra": "Terra"}
 SPEEDS = {"standard": ("Standard", "#9ec5f4"), "fast": ("Fast", "#3987e5"),
           "ultrafast": ("Ultrafast", "#184f95"), "unknown": ("no tag", "#55534e")}
 ACCENT, MUTED, GOOD, WARN, BAD = "#5fb7d4", "#898781", "#0ca30c", "#e0b400", "#d03b3b"
@@ -82,14 +83,16 @@ TEXT = {
     "tokens_day": "Tokens per local day by provider.",
     "kinds": "Where this period's tokens went. Cache reads are context re-sent from the provider's cache, billed "
              "at a fraction of the input price.",
-    "speed": "GPT-6 Astra and GPT-6.1 Sol tokens this period by speed tier. Fast costs 2x and Ultrafast 6x the "
-             "Standard API price (your plan allowance burns 2.5x / 8x). Speed is recorded from 26 Sep 2026 for "
-             "Astra and 19 Oct 2026 for Sol; earlier usage is labelled \"no tag\" and valued at Standard.",
-    "codex_speed": "Where the Codex value of the two models with speed tiers, GPT-6 Astra and GPT-6.1 Sol, went "
-                   "by speed. Fast costs 2x and Ultrafast 6x the Standard price. Each model's API value (as in "
-                   "Models) is split in proportion to its speed-tagged value from Codex's own logs, so the bars "
-                   "add up to those two models' value; other Codex models are not shown. Speed is recorded from "
-                   "26 Sep 2026 for Astra and 19 Oct 2026 for Sol; earlier usage is labelled \"no tag\" and valued at Standard.",
+    "speed": "GPT-6 Astra, GPT-6.1 Sol and GPT-6.1 Terra tokens by speed. Terra supports Standard and Fast; "
+             "Astra and Sol also support Ultrafast. Missing speed metadata is labelled no tag.",
+    "codex_speed": "API value by model and speed for Astra, Sol and Terra. Each model's total from Models "
+                   "is split using its speed-tagged API value. Terra's total retains the estimate label in "
+                   "Models because daily aggregates cannot resolve its long-context pricing. Missing speed "
+                   "metadata is labelled no tag and valued at Standard.",
+    "client_speed": "API list-price value by model and speed. Claude Code uses response speed tags; Droid uses "
+                    "the recorded model ID, including Fast and Ultrafast suffixes. Each model's breakdown adds "
+                    "up to its Models total. Missing history is labelled no tag. Unknown prices retain the "
+                    "estimate shown in Models. These are API equivalents, not subscription charges or Factory credits.",
     "limits": "Weekly limit used (left axis) and purchased credits left (right axis), from your Codex logs.",
 }
 
@@ -107,6 +110,34 @@ def speed_split(sel):
     by_speed = period(SPEED_VALUE, sel, "model,speed")
     return (f"({by_speed} / on(model) group_left {period(SPEED_VALUE, sel, 'model')})"
             f" * on(model) group_left {period(VALUE, sel, 'model')}")
+
+
+
+def client_speed_split(sel):
+    """Provider/model joins prevent the same model in two clients mixing.
+
+    A model absent from retained speed history still appears under no tag.
+    """
+    weights = period(CLIENT_SPEED_VALUE, sel, "provider,model,speed")
+    total = period(CLIENT_SPEED_VALUE, sel, "provider,model")
+    value = period(VALUE, sel, "provider,model")
+    split = f"({weights} / on(provider,model) group_left() ({total} > 0)) * on(provider,model) group_left {value}"
+    missing = f'label_replace(({value} unless on(provider,model) ({total} > 0)), "speed", "unknown", "model", ".*")'
+    return f"({split}) or ({missing})"
+
+
+def client_speed_overrides():
+    names = {"claude-opus-5-5": "Opus 5.5", "claude-opus-5": "Opus 5",
+             "claude-opus-4-8": "Opus 4.8", "claude-fable-5-1": "Fable 5.1",
+             "claude-fable-5": "Fable 5", "claude-sonnet-5-5": "Sonnet 5.5",
+             "claude-sonnet-5": "Sonnet 5", "claude-haiku-5-5": "Haiku 5.5",
+             "gpt-6-astra": "Astra", "gpt-6.1-sol": "Sol", "gpt-6-1-sol": "Sol",
+             "gpt-6.1-terra": "Terra", "gpt-6-1-terra": "Terra", "kimi-k3": "Kimi K3",
+             "kimi-k3-1-pro": "Kimi K3.1 Pro"}
+    return [override(r"^" + model.replace(".", r"\.") + r"(?:-fast|-ultrafast)? " + speed + "$",
+                     ("displayName", f"{name} {label}"),
+                     ("color", {"mode": "fixed", "fixedColor": color}), regexp=True)
+            for model, name in names.items() for speed, (label, color) in SPEEDS.items()]
 
 
 def since_midnight(metric, sel):
@@ -201,14 +232,14 @@ def bars(pid, pos, title, text, expr, legend, unit, shades=False, legend_table=F
                             "overrides": provider_colors(shades)}}
 
 
-def bar_list(pid, pos, title, text, expr, legend, unit, decimals, overrides, title_size=13, value_size=17):
+def bar_list(pid, pos, title, text, expr, legend, unit, decimals, overrides, title_size=13, value_size=17, name_placement="left"):
     x, y, w, h = pos
     return {"id": pid, "type": "bargauge", "title": title, "description": text, "datasource": DS,
             "gridPos": {"x": x, "y": y, "w": w, "h": h},
             "targets": [target("A", expr, legend, instant=True)],
             "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": False},
                         "orientation": "horizontal", "displayMode": "basic", "valueMode": "text",
-                        "namePlacement": "left", "showUnfilled": True, "sizing": "manual",
+                        "namePlacement": name_placement, "showUnfilled": True, "sizing": "manual",
                         "minVizWidth": 8, "minVizHeight": 18, "maxVizHeight": 36,
                         "legend": {"showLegend": False, "displayMode": "list", "placement": "bottom", "calcs": []},
                         "text": {"titleSize": title_size, "valueSize": value_size}},
@@ -344,10 +375,11 @@ def limits_chart(pid, pos):
 def body_panels():
     kinds = {"cache_read": "Cache reads", "input": "Input", "output": "Output (incl. reasoning)",
              "cache_write": "Cache writes"}
-    speed_sel = 'origin="client",provider="codex",model=~"gpt-6-astra|gpt-6.1-sol",' + FILTER
+    speed_sel = 'origin="client",provider="codex",model=~"{models}",'.format(models='|'.join(SPEED_MODELS)) + FILTER
     speed_mix = [override(f"{model} {speed}", ("displayName", f"{name} {label}"),
                           ("color", {"mode": "fixed", "fixedColor": color}))
-                 for model, name in SPEED_MODELS.items() for speed, (label, color) in SPEEDS.items()]
+                 for model, name in SPEED_MODELS.items() for speed, (label, color) in SPEEDS.items()
+                 if model != "gpt-6.1-terra" or speed != "ultrafast"]
     return [
         row(300, 4, "Where the value went"),
         bars(310, (0, 5, 12, 9), "API value per day", TEXT["per_day"],
@@ -357,7 +389,13 @@ def body_panels():
                  "{{provider}}", "currencyUSD", 2, provider_colors()),
         bar_list(318, (17, 5, 7, 9), "Codex by model & speed", TEXT["codex_speed"],
                  f"sort_desc({speed_split(speed_sel)} > 0)", "{{model}} {{speed}}",
-                 "currencyUSD", 2, speed_mix, title_size=12, value_size=15),
+                 "currencyUSD", 2, speed_mix, title_size=12, value_size=15, name_placement="top"),
+        bar_list(319, (0, 14, 12, 9), "Claude Code by model & speed", TEXT["client_speed"],
+                 "sort_desc((" + client_speed_split(SEL + ',provider="claude-code"') + ") > 0)",
+                 "{{model}} {{speed}}", "currencyUSD", 2, client_speed_overrides(), title_size=12, value_size=15, name_placement="top"),
+        bar_list(320, (12, 14, 12, 9), "Droid by model & speed", TEXT["client_speed"],
+                 "sort_desc((" + client_speed_split(SEL + ',provider="droid"') + ") > 0)",
+                 "{{model}} {{speed}}", "currencyUSD", 2, client_speed_overrides(), title_size=12, value_size=15, name_placement="top"),
         row(301, 14, "Models"),
         models_table(312, (0, 15, 24, 10)),
         bars(313, (0, 25, 24, 10), "API value per day by model", TEXT["per_model"],
@@ -413,6 +451,11 @@ def build(existing: dict, uid: str) -> dict:
         return {"asDropdown": False, "icon": "dashboard" if period_link else "external link",
                 "includeVars": period_link, "keepTime": not period_link, "tags": [], "targetBlank": False,
                 "title": title, "tooltip": tip, "type": "link", "url": url}
+
+    # Make room for both client speed panels in Where the value went.
+    for panel in _walk(panels):
+        if panel["id"] not in (319, 320) and panel["gridPos"]["y"] >= 14:
+            panel["gridPos"]["y"] += 9
 
     base = "/d/aiobs-estate/ai-estate"
     return {

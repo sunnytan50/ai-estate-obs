@@ -121,7 +121,11 @@ def day_entries(doc: dict, claude: dict, codex_split: dict, since_date=None) -> 
                 entry[(TOKENS, provider, model, kind)] += count
             rate = rate_for(model, day)
             # Daily aggregates cannot establish a request-level context tier.
-            if rate is None or rate.long_context_threshold:
+            tagged_speed = normalize_model(model)[1]
+            if (rate is None or rate.long_context_threshold
+                    or (tagged_speed != "standard" and tagged_speed not in dict(rate.speed_multipliers))):
+                # A known base model does not establish an unlisted speed's
+                # price. Keep the source estimate instead of silently using 1x.
                 if cost:
                     entry[(VALUE, provider, model, "")] += cost
                     entry[(FALLBACK, provider, model, "")] += cost

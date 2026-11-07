@@ -38,6 +38,7 @@ from aiobs_collector.core import (
     save_state,
 )
 from aiobs_collector.lane_openrouter import OpenRouterLane
+from aiobs_collector.lane_client_speed import ClientSpeedLane, METRICS as CLIENT_SPEED_METRICS
 from aiobs_collector.lane_codex_speed import CodexSpeedLane, TOKENS, ALLOWANCE, CREDITS, VALUE as SPEED_VALUE
 from aiobs_collector.lane_codex_limits import CodexLimitsLane, LIMIT_METRICS
 from aiobs_collector.lane_tokscale import TokscaleLane, clear_tokscale_graph_cache
@@ -56,7 +57,7 @@ from aiobs_collector.receipt import (
 # passed later, to .collect(cfg, state), not to __init__.
 _KNOWN_LANES = {"tokscale": TokscaleLane, "openrouter": OpenRouterLane,
                 "codex-speed": CodexSpeedLane, "usage": UsageLane,
-                "codex-limits": CodexLimitsLane}
+                "codex-limits": CodexLimitsLane, "client-speed": ClientSpeedLane}
 
 # These two are the run_lanes harness's own self-health samples (Task 8):
 # always timestamped `now_ms` on every run, never part of a lane's day-
@@ -65,7 +66,7 @@ _KNOWN_LANES = {"tokscale": TokscaleLane, "openrouter": OpenRouterLane,
 _ALWAYS_PUSH_METRICS = {"aiobs_lane_up", "aiobs_lane_last_success_timestamp"}
 
 # Lanes whose yesterday is recomputed every run until it freezes (see filter_for_push).
-_GRACE_LANES = {"usage"}
+_GRACE_LANES = {"usage", "client-speed"}
 
 
 class ConfigError(Exception):
@@ -120,6 +121,8 @@ def _lane_for_sample(sample) -> "str | None":
     """
     if sample.metric in {TOKENS, ALLOWANCE, CREDITS, SPEED_VALUE}:
         return "codex-speed"
+    if sample.metric in CLIENT_SPEED_METRICS:
+        return "client-speed"
     if sample.metric in USAGE_METRICS:
         return "usage"
     if sample.metric in LIMIT_METRICS:

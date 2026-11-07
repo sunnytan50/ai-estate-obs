@@ -1088,7 +1088,7 @@
       "id": 318,
       "type": "bargauge",
       "title": "Codex by model & speed",
-      "description": "Where the Codex value of the two models with speed tiers, GPT-6 Astra and GPT-6.1 Sol, went by speed. Fast costs 2x and Ultrafast 6x the Standard price. Each model's API value (as in Models) is split in proportion to its speed-tagged value from Codex's own logs, so the bars add up to those two models' value; other Codex models are not shown. Speed is recorded from 26 Sep 2026 for Astra and 19 Oct 2026 for Sol; earlier usage is labelled \"no tag\" and valued at Standard.",
+      "description": "API value by model and speed for Astra, Sol and Terra. Each model's total from Models is split using its speed-tagged API value. Terra's total retains the estimate label in Models because daily aggregates cannot resolve its long-context pricing. Missing speed metadata is labelled no tag and valued at Standard.",
       "datasource": {
         "type": "prometheus",
         "uid": "vm"
@@ -1106,7 +1106,7 @@
             "uid": "vm"
           },
           "refId": "A",
-          "expr": "sort_desc((sum by (model,speed)(max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0)) / on(model) group_left sum by (model)(max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0))) * on(model) group_left sum by (model)(max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0)) > 0)",
+          "expr": "sort_desc((sum by (model,speed)(max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0)) / on(model) group_left sum by (model)(max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0))) * on(model) group_left sum by (model)(max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\"}[400d] @ (${__to} / 1000)) * 0)) > 0)",
           "legendFormat": "{{model}} {{speed}}",
           "instant": true,
           "range": false
@@ -1123,7 +1123,7 @@
         "orientation": "horizontal",
         "displayMode": "basic",
         "valueMode": "text",
-        "namePlacement": "left",
+        "namePlacement": "top",
         "showUnfilled": true,
         "sizing": "manual",
         "minVizWidth": 8,
@@ -1312,6 +1312,2503 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-terra standard"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-terra fast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-terra unknown"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 319,
+      "type": "bargauge",
+      "title": "Claude Code by model & speed",
+      "description": "API list-price value by model and speed. Claude Code uses response speed tags; Droid uses the recorded model ID, including Fast and Ultrafast suffixes. Each model's breakdown adds up to its Models total. Missing history is labelled no tag. Unknown prices retain the estimate shown in Models. These are API equivalents, not subscription charges or Factory credits.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "refId": "A",
+          "expr": "sort_desc((((sum by (provider,model,speed)(max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) * 0)) / on(provider,model) group_left() (sum by (provider,model)(max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) * 0)) > 0)) * on(provider,model) group_left sum by (provider,model)(max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) * 0))) or (label_replace((sum by (provider,model)(max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) * 0)) unless on(provider,model) (sum by (provider,model)(max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"claude-code\"}[400d] @ (${__to} / 1000)) * 0)) > 0)), \"speed\", \"unknown\", \"model\", \".*\"))) > 0)",
+          "legendFormat": "{{model}} {{speed}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "top",
+        "showUnfilled": true,
+        "sizing": "manual",
+        "minVizWidth": 8,
+        "minVizHeight": 18,
+        "maxVizHeight": 36,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 15
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "currencyUSD",
+          "min": 0,
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5.5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5.5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5.5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5.5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-4-8(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 4.8 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-4-8(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 4.8 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-4-8(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 4.8 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-4-8(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 4.8 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-1(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.1 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-1(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.1 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-1(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.1 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-1(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.1 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5.5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5.5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5.5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5.5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-haiku-5-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Haiku 5.5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-haiku-5-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Haiku 5.5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-haiku-5-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Haiku 5.5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-haiku-5-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Haiku 5.5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-astra(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-astra(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-astra(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-astra(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-sol(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-sol(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-sol(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-sol(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-sol(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-sol(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-sol(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-sol(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-terra(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-terra(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-terra(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-terra(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-terra(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-terra(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-terra(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-terra(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3-1-pro(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3.1 Pro Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3-1-pro(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3.1 Pro Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3-1-pro(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3.1 Pro Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3-1-pro(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3.1 Pro no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 320,
+      "type": "bargauge",
+      "title": "Droid by model & speed",
+      "description": "API list-price value by model and speed. Claude Code uses response speed tags; Droid uses the recorded model ID, including Fast and Ultrafast suffixes. Each model's breakdown adds up to its Models total. Missing history is labelled no tag. Unknown prices retain the estimate shown in Models. These are API equivalents, not subscription charges or Factory credits.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "vm"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 9
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "vm"
+          },
+          "refId": "A",
+          "expr": "sort_desc((((sum by (provider,model,speed)(max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) * 0)) / on(provider,model) group_left() (sum by (provider,model)(max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) * 0)) > 0)) * on(provider,model) group_left sum by (provider,model)(max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) * 0))) or (label_replace((sum by (provider,model)(max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_list_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) * 0)) unless on(provider,model) (sum by (provider,model)(max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_client_speed_value_usd_total{origin=\"client\",provider=~\"$provider\",model=~\"$model\",provider=\"droid\"}[400d] @ (${__to} / 1000)) * 0)) > 0)), \"speed\", \"unknown\", \"model\", \".*\"))) > 0)",
+          "legendFormat": "{{model}} {{speed}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "valueMode": "text",
+        "namePlacement": "top",
+        "showUnfilled": true,
+        "sizing": "manual",
+        "minVizWidth": 8,
+        "minVizHeight": 18,
+        "maxVizHeight": 36,
+        "legend": {
+          "showLegend": false,
+          "displayMode": "list",
+          "placement": "bottom",
+          "calcs": []
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 15
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#898781"
+          },
+          "unit": "currencyUSD",
+          "min": 0,
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5.5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5.5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5.5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5.5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-4-8(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 4.8 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-4-8(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 4.8 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-4-8(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 4.8 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-opus-4-8(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Opus 4.8 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-1(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.1 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-1(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.1 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-1(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.1 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-1(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.1 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5.5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5.5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5.5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5.5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-sonnet-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sonnet 5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-haiku-5-5(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Haiku 5.5 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-haiku-5-5(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Haiku 5.5 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-haiku-5-5(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Haiku 5.5 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-haiku-5-5(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Haiku 5.5 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-astra(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-astra(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-astra(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-astra(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Astra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-sol(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-sol(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-sol(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-sol(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-sol(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-sol(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-sol(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-sol(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Sol no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-terra(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-terra(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-terra(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6\\.1-terra(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-terra(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-terra(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-terra(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^gpt-6-1-terra(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3-1-pro(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3.1 Pro Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3-1-pro(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3.1 Pro Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3-1-pro(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3.1 Pro Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^kimi-k3-1-pro(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Kimi K3.1 Pro no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
           }
         ]
       }
@@ -1323,7 +3820,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 23,
         "w": 24,
         "h": 1
       },
@@ -1340,7 +3837,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 15,
+        "y": 24,
         "w": 24,
         "h": 10
       },
@@ -1839,7 +4336,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 25,
+        "y": 34,
         "w": 24,
         "h": 10
       },
@@ -2011,7 +4508,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 44,
         "w": 24,
         "h": 1
       },
@@ -2028,7 +4525,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 36,
+        "y": 45,
         "w": 16,
         "h": 8
       },
@@ -2199,7 +4696,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 36,
+        "y": 45,
         "w": 8,
         "h": 8
       },
@@ -2323,7 +4820,7 @@
       "collapsed": false,
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 53,
         "w": 24,
         "h": 1
       },
@@ -2333,14 +4830,14 @@
       "id": 316,
       "type": "bargauge",
       "title": "Codex speed mix",
-      "description": "GPT-6 Astra and GPT-6.1 Sol tokens this period by speed tier. Fast costs 2x and Ultrafast 6x the Standard API price (your plan allowance burns 2.5x / 8x). Speed is recorded from 26 Sep 2026 for Astra and 19 Oct 2026 for Sol; earlier usage is labelled \"no tag\" and valued at Standard.",
+      "description": "GPT-6 Astra, GPT-6.1 Sol and GPT-6.1 Terra tokens by speed. Terra supports Standard and Fast; Astra and Sol also support Ultrafast. Missing speed metadata is labelled no tag.",
       "datasource": {
         "type": "prometheus",
         "uid": "vm"
       },
       "gridPos": {
         "x": 0,
-        "y": 45,
+        "y": 54,
         "w": 8,
         "h": 8
       },
@@ -2351,7 +4848,7 @@
             "uid": "vm"
           },
           "refId": "A",
-          "expr": "sort_desc(sum by (model,speed)(max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__to} / 1000)) * 0)) > 0)",
+          "expr": "sort_desc(sum by (model,speed)(max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__to} / 1000)) - (max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__from} / 1000)) or max_over_time(aiobs_codex_speed_tokens_total{origin=\"client\",provider=\"codex\",model=~\"gpt-6-astra|gpt-6.1-sol|gpt-6.1-terra\",provider=~\"$provider\",model=~\"$model\",billing!=\"api\"}[400d] @ (${__to} / 1000)) * 0)) > 0)",
           "legendFormat": "{{model}} {{speed}}",
           "instant": true,
           "range": false
@@ -2557,6 +5054,63 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-terra standard"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-terra fast"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "gpt-6.1-terra unknown"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Terra no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
           }
         ]
       }
@@ -2572,7 +5126,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 45,
+        "y": 54,
         "w": 16,
         "h": 8
       },
@@ -2725,7 +5279,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 53,
+        "y": 62,
         "w": 24,
         "h": 1
       },
@@ -2737,7 +5291,7 @@
           "description": "Which engine and model the inference server on the GPU box is running right now (vLLM, SGLang or llama.cpp; llama.cpp exposes no model label). Offline = no engine metrics in the last 2 minutes.",
           "gridPos": {
             "x": 0,
-            "y": 54,
+            "y": 63,
             "w": 6,
             "h": 4
           },
@@ -2875,7 +5429,7 @@
           "description": "Live load and cache state of the resident engine: requests running and queued, KV-cache occupancy (vLLM kv_cache_usage_perc / SGLang token_usage), prefix-cache hit rate (cached prompt tokens / prompt tokens) and completed requests -- the last two over the dashboard time range.",
           "gridPos": {
             "x": 6,
-            "y": 54,
+            "y": 63,
             "w": 18,
             "h": 4
           },
@@ -3023,7 +5577,7 @@
           "description": "Board power draw on the GPU box against its enforced power limit (dashed). The axis keeps the whole power budget in view, so idle reads as idle.",
           "gridPos": {
             "x": 0,
-            "y": 58,
+            "y": 67,
             "w": 8,
             "h": 8
           },
@@ -3172,7 +5726,7 @@
           "description": "SM utilization and VRAM occupancy, both as a share of capacity on one 0-100% axis (VRAM sits near the engine's reservation, e.g. vLLM gpu_memory_utilization, whenever a model is loaded).",
           "gridPos": {
             "x": 8,
-            "y": 58,
+            "y": 67,
             "w": 8,
             "h": 8
           },
@@ -3323,7 +5877,7 @@
           "description": "Energy since local midnight plus the latest die temperature, fan duty, graphics clock and VRAM in use on the GPU box -- always the present, whatever the dashboard range (instant queries pinned to now and to local midnight, see zoom_safe). Energy is MetricsQL integrate() over the actual power samples, in kWh -- deliberately NOT avg_over_time(...) * $__range_s, which extrapolates the sampled average across unsampled hours and over-reported ~3.4x on a partial-coverage day (drifting DOWNWARD as idle samples accumulated); caught 2026-08-29 against a raw /api/v1/export trapezoid ground truth (integrate() matched within 0.25%). integrate() wraps the raw selector: integrate(max(m)[..]) is an implicit subquery that resamples and read 0.85% high (2026-09-27). Evaluated as an instant query over (midnight, now]: the RANGE path of integrate() carries the last reading through an outage (read 27% high for 10 Sep), the instant path does not.",
           "gridPos": {
             "x": 16,
-            "y": 58,
+            "y": 67,
             "w": 8,
             "h": 8
           },
@@ -3517,7 +6071,7 @@
           "description": "Decode tokens per second across whichever engine is resident (one __name__ regex over vLLM, SGLang and both llama.cpp spellings; keep_metric_names prevents duplicate-series collisions). $__rate_interval widens with the step so long ranges average instead of aliasing.",
           "gridPos": {
             "x": 0,
-            "y": 66,
+            "y": 75,
             "w": 8,
             "h": 8
           },
@@ -3613,7 +6167,7 @@
           "description": "Prompt tokens per second the engine actually computed (prefill work), across engines -- prefix-cache hits are left out: vLLM and SGLang prompt totals include them (vLLM counted cache hits as prefill about 5.7x over) while llama.cpp's do not, so each engine's computed-only counter is used. Split from generation on purpose: prefill runs 10-30x faster than decode and would flatten it on a shared axis.",
           "gridPos": {
             "x": 8,
-            "y": 66,
+            "y": 75,
             "w": 8,
             "h": 8
           },
@@ -3709,7 +6263,7 @@
           "description": "Time to first token and end-to-end request latency from the engine's own histograms (vLLM and SGLang expose both; llama.cpp has no latency histogram). Gaps mean no requests in that window.",
           "gridPos": {
             "x": 16,
-            "y": 66,
+            "y": 75,
             "w": 8,
             "h": 8
           },
@@ -3936,7 +6490,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 54,
+        "y": 63,
         "w": 24,
         "h": 1
       },
@@ -3948,7 +6502,7 @@
           "description": "History of every moving part over the dashboard range: which inference engine was resident on the GPU box, whether the LLM server and GPU exporter answered their scrapes (worst state per step), and whether each collector lane succeeded (a push every 10 minutes; 20-minute window). Empty = no data at all -- the box or collector was off.",
           "gridPos": {
             "x": 0,
-            "y": 55,
+            "y": 64,
             "w": 16,
             "h": 7
           },
@@ -4107,7 +6661,7 @@
           "description": "Current state of each data path. Status: a collector lane is up when it succeeded in the last 20 minutes; a scrape is up when the last scrape in 2 minutes answered (a signal seen in the last 30 days but silent now reads down). Last seen: time since the lane's last success (aiobs_lane_last_success_timestamp) or since the last sample actually arrived (tlast_over_time) -- green under 15 minutes, amber under an hour, red beyond. Health gauges are wrapped in last_over_time because a bare instant selector's ~5-minute staleness lookback is shorter than the collector's 600 s push cadence.",
           "gridPos": {
             "x": 16,
-            "y": 55,
+            "y": 64,
             "w": 8,
             "h": 7
           },
@@ -4324,7 +6878,7 @@
           "description": "Daily tokens by Hermes model/profile as tokscale sees Hermes on the client side -- a mix of local-served and cloud-routed traffic, so it is never summed into any cross-provider total here (anti-double-count rule). One bar per local day, today last (same forward-looking two-point subtraction as the cloud panels, not increase()).",
           "gridPos": {
             "x": 0,
-            "y": 62,
+            "y": 71,
             "w": 24,
             "h": 8
           },

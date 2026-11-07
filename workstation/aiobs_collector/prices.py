@@ -36,6 +36,7 @@ class Rate:
     since: str = "2000-01-01"
     long_context_threshold: int = 0
     long_context_multiplier: float = 1.0
+    long_context_output_multiplier: float | None = None
 
     def multiplier(self, speed: str) -> float:
         """Price multiplier for a speed tier; standard, unknown or unlisted -> 1.0."""
@@ -84,6 +85,11 @@ TABLE = {
     # oldest day not yet frozen, so frozen days keep the value they were pushed with.
     "gpt-6.1-sol": (_openai(2, 0.10, 2.5, 10, fast=2.0),
                     Rate(2, 10, 0.10, 2.5, 2.5, (("fast", 2.0), ("ultrafast", 6.0)), since="2026-10-19")),
+    # Official model page fetched 2026-10-27. Daily usage keeps its estimate:
+    # Terra requests can exceed 272K; only request-level speed data resolves the tier.
+    "gpt-6.1-terra": (Rate(1, 5, 0.05, 1.25, 2.50, (("fast", 2.0),),
+                            long_context_threshold=272_000, long_context_multiplier=2.0,
+                            long_context_output_multiplier=1.5),),
     "gpt-6-luna": (_openai(0.10, 0.01, 0.125, 0.50, fast=2.0),),
     "gpt-5.6-sol": (_openai(4, 0.40, 5, 20),),
     "gpt-5.6-luna": (_openai(0.20, 0.02, 0.25, 1.20),),  # no Fast price is listed
@@ -104,15 +110,18 @@ def normalize_model(model: str) -> tuple:
 
     'anthropic/' and 'openai/' prefixes and Anthropic date suffixes are
     dropped; Droid's hyphenated GPT ids become dotted ('gpt-5-6-sol' ->
-    'gpt-5.6-sol'); a '-fast' suffix means fast mode on the base model.
+    'gpt-5.6-sol'); '-fast' and '-ultrafast' select a speed on the base model.
     """
     key = model.strip().lower()
     for prefix in ("anthropic/", "openai/"):
         if key.startswith(prefix):
             key = key[len(prefix):]
     speed = "standard"
-    if key.endswith("-fast"):
-        key, speed = key[: -len("-fast")], "fast"
+    key = _DATE_SUFFIX.sub("", key)
+    for suffix in ("ultrafast", "fast"):
+        if key.endswith("-" + suffix):
+            key, speed = key[: -len(suffix) - 1], suffix
+            break
     key = _DATE_SUFFIX.sub("", key)
     match = _HYPHENATED_GPT.match(key)
     if match:
@@ -143,5 +152,7 @@ def value_usd(rate: Rate, tokens: dict, speed: str = "standard") -> float:
     # These are subsets of the real token counts, marked per request before
     # daily aggregation; add only their premium, never count them twice.
     for kind in ("input", "output", "cache_read", "cache_write_5m", "cache_write_1h"):
-        per_million += tokens.get("long_context_" + kind, 0) * getattr(rate, kind) * (rate.long_context_multiplier - 1)
+        multiplier = (rate.long_context_output_multiplier if kind == "output"
+                      and rate.long_context_output_multiplier is not None else rate.long_context_multiplier)
+        per_million += tokens.get("long_context_" + kind, 0) * getattr(rate, kind) * (multiplier - 1)
     return per_million * rate.multiplier(speed) / 1e6

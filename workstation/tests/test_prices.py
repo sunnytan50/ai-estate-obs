@@ -8,6 +8,17 @@ DAY = "2026-10-05"
 
 
 class RateTableTests(unittest.TestCase):
+    def test_fable_52_release_and_fast_cache_pricing(self):
+        self.assertIsNone(rate_for("claude-fable-5-2", "2026-11-08"))
+        model, speed = normalize_model("anthropic/claude-fable-5-2-fast-20261109")
+        rate = rate_for(model, "2026-11-09")
+        tokens = dict(input=1_000_000, output=1_000_000,
+                      cache_read=1_000_000, cache_write_5m=1_000_000,
+                      cache_write_1h=1_000_000)
+        self.assertAlmostEqual(value_usd(rate, tokens), 74.20)
+        self.assertAlmostEqual(value_usd(rate, tokens, speed), 148.40)
+        self.assertEqual(rate_for("claude-fable-5-1", "2026-11-10").input, 10)
+
     def test_anthropic_rates_follow_the_official_page(self):
         opus = rate_for("claude-opus-5-5", DAY)
         self.assertEqual((opus.input, opus.output), (4, 20))

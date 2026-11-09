@@ -55,6 +55,10 @@ def _openai(inp, cached, write, out, fast=None, ultrafast=None):
 
 
 TABLE = {
+    # Fable 5.2: official pricing/overview verified 2026-11-10; released Nov 9.
+    # Standard $8/$40, cache read $0.20, writes $10/$16; Fast doubles all.
+    "claude-fable-5-2": (Rate(8, 40, 0.20, 10, 16, (("fast", 2.0),),
+                               since="2026-11-09"),),
     # Anthropic. Cache read 0.1x input, except Fable 5.1 / Mythos 5.1 (0.025x)
     # and Opus 5.5 (0.05x). Fast mode: Opus 5.5 $8/$40 and Opus 5 $10/$50,
     # i.e. 2x, with the cache multipliers on top. Claude 4.6+ models have no

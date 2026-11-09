@@ -1453,6 +1453,82 @@
           {
             "matcher": {
               "id": "byRegexp",
+              "options": "^claude-fable-5-2(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.2 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-2(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.2 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-2(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.2 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-2(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.2 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
               "options": "^claude-opus-5-5(?:-fast|-ultrafast)? standard$"
             },
             "properties": [
@@ -2670,6 +2746,82 @@
           }
         },
         "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-2(?:-fast|-ultrafast)? standard$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.2 Standard"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#9ec5f4"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-2(?:-fast|-ultrafast)? fast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.2 Fast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-2(?:-fast|-ultrafast)? ultrafast$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.2 Ultrafast"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#184f95"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^claude-fable-5-2(?:-fast|-ultrafast)? unknown$"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Fable 5.2 no tag"
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#55534e"
+                }
+              }
+            ]
+          },
           {
             "matcher": {
               "id": "byRegexp",

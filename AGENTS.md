@@ -34,3 +34,5 @@ Rules for any agent (Claude, Droid, Codex) working in this repository. Global co
 - 2026-10-27: Add GPT-6.1 Terra to the live dashboard and speed collector. Standard/Fast supported; keep daily API value labelled estimate where request-level long-context tiers are unavailable. See `docs/handoffs/2026-10-27-terra-dashboard.md`. Included in the owner-authorized dashboard commit/push on 2026-11-08.
 
 - 2026-11-08: Show and account for Astra Fast/Ultrafast, Claude Code Opus 5.5 Fast, and Droid speed modes on the live dashboard. Preserve frozen usage totals and prior Terra work. Owner subsequently authorized committing and pushing the dashboard changes in this chat. See `docs/handoffs/2026-11-08-client-speed-coverage.md`.
+
+- 2026-11-10: Add Fable 5.2 to the live dashboard with verified Standard/Fast API list prices. Preserve frozen history and existing model rates. See `docs/handoffs/2026-11-10-fable52-dashboard.md`. Owner subsequently authorized committing and pushing these changes on 2026-11-10.
